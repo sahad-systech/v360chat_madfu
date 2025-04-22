@@ -1,15 +1,45 @@
 import 'dart:developer';
-
 import 'package:flutter/material.dart';
 import 'package:intl_phone_field/intl_phone_field.dart';
+import 'package:socket_io_client/socket_io_client.dart';
+import 'package:view360_chat/screens/chat_screen.dart';
 
-class ChatRegisterPage extends StatelessWidget {
+import '../main.dart';
+import '../service/chat_api.dart';
+import '../socket/socket.dart';
+
+class ChatRegisterPage extends StatefulWidget {
   const ChatRegisterPage({super.key});
+
+  @override
+  State<ChatRegisterPage> createState() => _ChatRegisterPageState();
+}
+
+class _ChatRegisterPageState extends State<ChatRegisterPage> {
+  final _formKey = GlobalKey<FormState>();
+  final _nameController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _descController = TextEditingController();
+  String? _phoneNumber;
+  late String socketId;
+
+  @override
+  void initState() {
+    super.initState();
+
+    SocketManager().connect();
+
+    SocketManager().socket.onConnect((_) {
+      setState(() {
+        socketId = SocketManager().socket.id ?? '';
+      });
+      log('Assigned socketId: $socketId');
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     final media = MediaQuery.of(context).size;
-
     return Scaffold(
       body: SingleChildScrollView(
         child: Column(
@@ -57,66 +87,160 @@ class ChatRegisterPage extends StatelessWidget {
             // Form
             Padding(
               padding: EdgeInsets.all(media.width * 0.05),
-              child: Column(
-                children: [
-                  _buildTextField('Full Name', media),
-
-                  SizedBox(height: media.height * 0.02),
-
-                  // Phone Input with Country Code
-                  IntlPhoneField(
-                    decoration: InputDecoration(
-                      contentPadding: EdgeInsets.symmetric(
-                        vertical: media.height * 0.02,
-                        horizontal: media.width * 0.04,
-                      ),
-                      counter: SizedBox.shrink(),
-                      labelText: 'Contact Number',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  children: [
+                    // Full Name
+                    _buildTextField(
+                      label: 'Full Name',
+                      controller: _nameController,
+                      media: media,
+                      validator: (value) =>
+                          value!.isEmpty ? 'Name is required' : null,
                     ),
-                    initialCountryCode: 'AE', // Saudi Arabia by default
-                    onChanged: (phone) {
-                      log(phone.completeNumber); // Use this to send full number
-                    },
-                  ),
+                    SizedBox(height: media.height * 0.02),
 
-                  SizedBox(height: media.height * 0.02),
-                  _buildTextField('Email', media),
-
-                  SizedBox(height: media.height * 0.02),
-                  _buildTextField(
-                    'Please describe the Issue',
-                    media,
-                    maxLines: 4,
-                  ),
-
-                  SizedBox(height: media.height * 0.04),
-
-                  SizedBox(
-                    width: double.infinity,
-                    height: media.height * 0.07,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.indigo[900],
-                        shape: RoundedRectangleBorder(
+                    // Phone Field
+                    IntlPhoneField(
+                      decoration: InputDecoration(
+                        contentPadding: EdgeInsets.symmetric(
+                          vertical: media.height * 0.02,
+                          horizontal: media.width * 0.04,
+                        ),
+                        counter: const SizedBox.shrink(),
+                        labelText: 'Contact Number',
+                        border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-                      onPressed: () {
-                        // handle form submission
+                      initialCountryCode: 'AE',
+                      onChanged: (phone) {
+                        _phoneNumber = phone.completeNumber;
+                        log('Phone: $_phoneNumber');
                       },
-                      child: Text(
-                        'Send',
-                        style: TextStyle(
-                          fontSize: media.width * 0.05,
-                          color: Colors.white,
+                    ),
+                    SizedBox(height: media.height * 0.02),
+
+                    // Email
+                    _buildTextField(
+                      label: 'Email',
+                      controller: _emailController,
+                      media: media,
+                      validator: (value) {
+                        if (value!.isNotEmpty) {
+                          final emailRegex =
+                              RegExp(r"^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$");
+                          if (!emailRegex.hasMatch(value)) {
+                            return 'Enter a valid email';
+                          }
+                        }
+                        return null;
+                      },
+                    ),
+                    SizedBox(height: media.height * 0.02),
+
+                    // Issue Description
+                    _buildTextField(
+                      label: 'Please describe the Issue',
+                      controller: _descController,
+                      media: media,
+                      maxLines: 4,
+                      validator: (value) =>
+                          value!.isEmpty ? 'Description is required' : null,
+                    ),
+                    SizedBox(height: media.height * 0.04),
+
+                    // Send Button
+                    SizedBox(
+                      width: double.infinity,
+                      height: media.height * 0.07,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.indigo[900],
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        onPressed: () async {
+                          final isValid =
+                              _formKey.currentState?.validate() ?? false;
+
+                          final phone = _phoneNumber?.trim() ?? '';
+                          final email = _emailController.text.trim();
+
+                          if (!isValid) return;
+
+                          // Custom logic: exactly one of phone or email is required
+                          if ((phone.isEmpty && email.isEmpty) ||
+                              (phone.isNotEmpty && email.isNotEmpty)) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'Please provide only one: either a contact number or an email address.',
+                                ),
+                              ),
+                            );
+                            return;
+                          }
+
+                          // Passed all checks
+                          log('Name: ${_nameController.text}');
+                          log('Phone: $phone');
+                          log('Email: $email');
+                          log('Description: ${_descController.text}');
+                          final String chatId =
+                              DateTime.now().millisecondsSinceEpoch.toString();
+                          final Map<String, String> status =
+                              await ChatApi.sendChatMessageDataSource(
+                            customerphone: phone,
+                            chatContent: _descController.text,
+                            chatId: chatId,
+                            messageUID: DateTime.now()
+                                .millisecondsSinceEpoch
+                                .toString(),
+                            socketId: socketId,
+                            customerName: _nameController.text,
+                            customerEmail: email,
+                            createdAt: DateTime.now().toString(),
+                          );
+
+                          if (status['status'] == 'true') {
+                            // ignore: use_build_context_synchronously
+                            Navigator.of(context).pushAndRemoveUntil(
+                                MaterialPageRoute(
+                                    builder: (_) => ChatScreen(
+                                          key: chatScreenKey,
+                                          customerId: status['id']!,
+                                          socketId: socketId,
+                                          customerName: _nameController.text,
+                                          chatId: chatId,
+                                          customerEmail: email,
+                                          customerphone: phone,
+                                        )),
+                                (_) => false);
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'Fail to Login',
+                                ),
+                              ),
+                            );
+                            return;
+                          }
+                        },
+                        child: Text(
+                          'Send',
+                          style: TextStyle(
+                            fontSize: media.width * 0.05,
+                            color: Colors.white,
+                          ),
                         ),
                       ),
-                    ),
-                  )
-                ],
+                    )
+                  ],
+                ),
               ),
             ),
           ],
@@ -125,11 +249,19 @@ class ChatRegisterPage extends StatelessWidget {
     );
   }
 
-  Widget _buildTextField(String hint, Size media, {int maxLines = 1}) {
-    return TextField(
+  Widget _buildTextField({
+    required String label,
+    required TextEditingController controller,
+    required Size media,
+    int maxLines = 1,
+    String? Function(String?)? validator,
+  }) {
+    return TextFormField(
+      controller: controller,
       maxLines: maxLines,
+      validator: validator,
       decoration: InputDecoration(
-        hintText: hint,
+        hintText: label,
         hintStyle: const TextStyle(color: Colors.grey),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),

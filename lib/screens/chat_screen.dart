@@ -4,6 +4,7 @@ import 'dart:developer';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
+import '../service/chat_api.dart';
 import '../socket/socket.dart';
 
 class ChatScreenController {
@@ -12,10 +13,19 @@ class ChatScreenController {
 
 class ChatScreen extends StatefulWidget {
   final String customerId;
-
+  final String socketId;
+  final String customerName;
+  final String? customerEmail;
+  final String? customerphone;
+  final String chatId;
   const ChatScreen({
     super.key,
     required this.customerId,
+    required this.socketId,
+    required this.customerName,
+    this.customerEmail,
+    this.customerphone,
+    required this.chatId,
   });
 
   @override
@@ -33,10 +43,7 @@ class ChatScreenState extends State<ChatScreen> {
     super.initState();
 
     ChatScreenController.chatKey = widget.key as GlobalKey<ChatScreenState>?;
-    SocketManager().connect(
-      context: context,
-      listId: widget.customerId,
-    );
+
     fetchMessage().then((value) {
       setState(() {
         _messages = value;
@@ -102,50 +109,6 @@ class ChatScreenState extends State<ChatScreen> {
     return chatList;
   }
 
-  Future<bool> sendChatMessageDataSource({
-    required String chatContent,
-    required String chatId,
-    required String messageUID,
-    required String socketId,
-    required String customerName,
-    required String customerEmail,
-    required String createdAt,
-  }) async {
-    try {
-      var request = http.MultipartRequest(
-        'POST',
-        Uri.parse(
-            'https://webchat.systech.ae/widgetapi/messages/customerMessage'),
-      );
-
-      request.headers.addAll({
-        'app-id': '67c6a1e7ce56d3d6fa748ab6d9af3fd7',
-      });
-
-      request.fields['content'] = chatContent;
-      request.fields['ChatId'] = chatId;
-      request.fields['messageId'] = messageUID;
-      request.fields['senderType'] = 'customer';
-      request.fields['socketId'] = socketId;
-      request.fields['status'] = 'pending';
-      request.fields['createdAt'] = createdAt;
-      request.fields['customerInfo[name]'] = customerName;
-      request.fields['customerInfo[email]'] = customerEmail;
-      request.fields['customerInfo[mobile]'] = '';
-
-      final response = await request.send();
-
-      if (response.statusCode == 200 || response.statusCode == 304) {
-        // final responseData = await response.stream.bytesToString();
-        return true;
-      } else {
-        return false;
-      }
-    } catch (e) {
-      throw Exception(e.toString());
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final media = MediaQuery.of(context).size;
@@ -172,7 +135,7 @@ class ChatScreenState extends State<ChatScreen> {
                 ),
                 SizedBox(height: media.height * 0.02),
                 Text(
-                  'Hi Sahad',
+                  'Hi ${widget.customerName}',
                   style: TextStyle(
                     fontSize: media.width * 0.07,
                     fontWeight: FontWeight.bold,
@@ -256,17 +219,19 @@ class ChatScreenState extends State<ChatScreen> {
                     ),
                     onPressed: () async {
                       if (_messageController.text.isNotEmpty) {
-                        final bool status = await sendChatMessageDataSource(
+                        final Map<String, String> status =
+                            await ChatApi.sendChatMessageDataSource(
+                          customerphone: widget.customerphone ?? '',
                           chatContent: _messageController.text,
-                          chatId: "web-GPh9NAlSCs5EJeul",
+                          chatId: widget.chatId,
                           messageUID:
                               DateTime.now().millisecondsSinceEpoch.toString(),
-                          socketId: "9jczs-vvHVJM5GBYAGSI",
-                          customerName: "abuss",
-                          customerEmail: "abu@gmail.com",
+                          socketId: widget.socketId,
+                          customerName: widget.customerName,
+                          customerEmail: widget.customerEmail ?? '',
                           createdAt: DateTime.now().toString(),
                         );
-                        if (status) {
+                        if (status['status'] == 'true') {
                           setState(() {
                             _messages.add({
                               'text': _messageController.text,

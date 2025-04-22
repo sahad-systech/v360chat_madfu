@@ -1,6 +1,5 @@
 import 'dart:developer';
 
-import 'package:flutter/material.dart';
 import 'package:socket_io_client/socket_io_client.dart' as io;
 
 import '../screens/chat_screen.dart';
@@ -58,10 +57,7 @@ class SocketManager {
 
   SocketManager._internal();
 
-  void connect({
-    required BuildContext context,
-    required String listId,
-  }) {
+  void connect() {
     _socket = io.io(
       'https://webchat.systech.ae',
       io.OptionBuilder()
