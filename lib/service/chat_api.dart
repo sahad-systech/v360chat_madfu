@@ -1,9 +1,12 @@
 import 'dart:convert';
+import 'dart:developer';
 
+import 'package:file_picker/file_picker.dart';
 import 'package:http/http.dart' as http;
 
 class ChatApi {
   static Future<Map<String, String>> sendChatMessageDataSource({
+    List<PlatformFile>? selectedFiles,
     required String chatContent,
     required String chatId,
     required String messageUID,
@@ -14,45 +17,75 @@ class ChatApi {
     required String customerphone,
   }) async {
     try {
-      var request = http.MultipartRequest(
-        'POST',
-        Uri.parse(
-            'https://webchat.systech.ae/widgetapi/messages/customerMessage'),
-      );
+      var uri = Uri.parse(
+          'https://webchat.systech.ae/widgetapi/messages/customerMessage');
 
-      request.headers.addAll({
-        'app-id': '67c6a1e7ce56d3d6fa748ab6d9af3fd7',
-      });
+      var request = http.MultipartRequest('POST', uri)
+        ..headers.addAll({
+          'app-id': '67c6a1e7ce56d3d6fa748ab6d9af3fd7',
+        })
+        ..fields.addAll({
+          'content': chatContent,
+          'ChatId': chatId,
+          'messageId': messageUID,
+          'senderType': 'customer',
+          'socketId': socketId,
+          'status': 'pending',
+          'createdAt': createdAt,
+          'customerInfo[name]': customerName,
+          'customerInfo[email]': customerEmail,
+          'customerInfo[mobile]': customerphone,
+        });
 
-      request.fields['content'] = chatContent;
-      request.fields['ChatId'] = chatId;
-      request.fields['messageId'] = messageUID;
-      request.fields['senderType'] = 'customer';
-      request.fields['socketId'] = socketId;
-      request.fields['status'] = 'pending';
-      request.fields['createdAt'] = createdAt;
-      request.fields['customerInfo[name]'] = customerName;
-      request.fields['customerInfo[email]'] = customerEmail;
-      request.fields['customerInfo[mobile]'] = customerphone;
+      if (selectedFiles == null || selectedFiles.isEmpty) {
+        log("No files selected");
+      } else {
+        try {
+          for (var file in selectedFiles) {
+            if (file.path != null) {
+              request.files.add(
+                await http.MultipartFile.fromPath(
+                  'files',
+                  file.path!,
+                  filename: file.name,
+                ),
+              );
+            } else {
+              throw Exception('File path is null for: ${file.name}');
+            }
+          }
+        } catch (e) {
+          log("File upload failed, continuing without files: $e");
+        }
+      }
+
+      log("Sending chat message with files: ${selectedFiles?.map((e) => e.name).toList()}");
 
       final response = await request.send();
 
+      final responseString = await response.stream.bytesToString();
+
       if (response.statusCode == 200 || response.statusCode == 304) {
-        final responseString = await response.stream.bytesToString();
         final responseData = jsonDecode(responseString);
+        log("Response: $responseData");
 
         return {
           "status": responseData['status'].toString(),
           "id": responseData['content']['id'].toString(),
         };
       } else {
+        log("Failed with status: ${response.statusCode}, body: $responseString");
         return {
           "status": 'false',
           "id": "0",
         };
       }
     } catch (e) {
-      throw Exception(e.toString());
+      log("Exception in sendChatMessageDataSource: $e");
+      return {
+        "status": 'false',
+        "id": "0",
+      };
     }
   }
 }

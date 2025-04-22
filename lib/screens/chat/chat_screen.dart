@@ -1,11 +1,15 @@
 import 'dart:convert';
 import 'dart:developer';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:file_picker/file_picker.dart';
+import 'package:image_picker/image_picker.dart';
 
-import '../service/chat_api.dart';
-import '../socket/socket.dart';
+import '../../service/chat_api.dart';
+import '../../socket/socket.dart';
+import 'widgets/doc_piker.dart';
 
 class ChatScreenController {
   static GlobalKey<ChatScreenState>? chatKey;
@@ -36,7 +40,13 @@ class ChatScreenState extends State<ChatScreen> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
 
+  final ImagePicker _imagePicker = ImagePicker();
+
   List<Map<String, dynamic>> _messages = [];
+
+  List<PlatformFile> selectedFiles = [];
+
+  bool _isSending = false;
 
   @override
   void initState() {
@@ -79,6 +89,86 @@ class ChatScreenState extends State<ChatScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _scrollToBottom();
     });
+  }
+
+  Future<PlatformFile> convertXFileToPlatformFile(XFile xfile) async {
+    final bytes = await xfile.readAsBytes();
+    final file = File(xfile.path);
+    return PlatformFile(
+      name: file.uri.pathSegments.last,
+      size: bytes.length,
+      path: file.path,
+      bytes: bytes,
+    );
+  }
+
+  void showChatBottomSheet(BuildContext context) {
+    showModalBottomSheet(
+      isScrollControlled: true,
+      barrierColor: Colors.transparent,
+      context: context,
+      builder: (context) => ChatBottomSheet(
+        onGalleryTap: () async {
+          Navigator.pop(context);
+          final result = await FilePicker.platform.pickFiles(
+            type: FileType.image,
+            allowMultiple: true,
+          );
+          if (result != null && result.files.isNotEmpty) {
+            selectedFiles.clear();
+            setState(() {
+              selectedFiles = result.files;
+            });
+            for (var file in selectedFiles) {
+              log("Picked gallery file: ${file.name}");
+            }
+          }
+        },
+        onCameraTap: () async {
+          Navigator.pop(context);
+          final pickedFile =
+              await _imagePicker.pickImage(source: ImageSource.camera);
+          if (pickedFile != null) {
+            selectedFiles.clear();
+            setState(() async {
+              selectedFiles.add(await convertXFileToPlatformFile(pickedFile));
+            });
+          }
+        },
+        onDocumentTap: () async {
+          Navigator.pop(context);
+          final result = await FilePicker.platform.pickFiles(
+            type: FileType.any,
+            allowMultiple: true,
+          );
+          if (result != null && result.files.isNotEmpty) {
+            selectedFiles.clear();
+            setState(() {
+              selectedFiles = result.files;
+            });
+            for (var file in selectedFiles) {
+              log("Picked document: ${file.name}");
+            }
+          }
+        },
+        onAudioTap: () async {
+          Navigator.pop(context);
+          final result = await FilePicker.platform.pickFiles(
+            type: FileType.any,
+            allowMultiple: true,
+          );
+          if (result != null && result.files.isNotEmpty) {
+            selectedFiles.clear();
+            setState(() {
+              selectedFiles = result.files;
+            });
+            for (var file in selectedFiles) {
+              log("Picked audio file: ${file.name}");
+            }
+          }
+        },
+      ),
+    );
   }
 
   Future<List<Map<String, dynamic>>> fetchMessage() async {
@@ -204,8 +294,12 @@ class ChatScreenState extends State<ChatScreen> {
                   ),
                 ),
                 const SizedBox(width: 8),
+                if (selectedFiles.isNotEmpty)
+                  Icon(Icons.insert_drive_file_sharp, color: Colors.grey),
                 IconButton(
-                  onPressed: () {},
+                  onPressed: () => showChatBottomSheet(
+                    context,
+                  ),
                   icon: Icon(Icons.attach_file),
                   color: Colors.grey,
                 ),
@@ -218,11 +312,18 @@ class ChatScreenState extends State<ChatScreen> {
                       size: 12,
                     ),
                     onPressed: () async {
-                      if (_messageController.text.isNotEmpty) {
+                      if (_isSending) return;
+
+                      if (_messageController.text.isNotEmpty &&
+                          _messageController.text.trim() != '') {
+                        setState(() => _isSending = true);
+
                         final Map<String, String> status =
                             await ChatApi.sendChatMessageDataSource(
+                          // selectedFiles:
+                          //     selectedFiles.isEmpty ? null : selectedFiles,
                           customerphone: widget.customerphone ?? '',
-                          chatContent: _messageController.text,
+                          chatContent: _messageController.text.trim(),
                           chatId: widget.chatId,
                           messageUID:
                               DateTime.now().millisecondsSinceEpoch.toString(),
@@ -231,19 +332,23 @@ class ChatScreenState extends State<ChatScreen> {
                           customerEmail: widget.customerEmail ?? '',
                           createdAt: DateTime.now().toString(),
                         );
+
                         if (status['status'] == 'true') {
                           setState(() {
                             _messages.add({
-                              'text': _messageController.text,
+                              'text': _messageController.text.trim(),
                               'isMe': true,
                             });
                             _messageController.clear();
+                            selectedFiles.clear();
                           });
 
                           WidgetsBinding.instance.addPostFrameCallback((_) {
                             _scrollToBottom();
                           });
                         }
+
+                        setState(() => _isSending = false);
                       }
                     },
                   ),

@@ -2,11 +2,11 @@ import 'dart:developer';
 import 'package:flutter/material.dart';
 import 'package:intl_phone_field/intl_phone_field.dart';
 import 'package:socket_io_client/socket_io_client.dart';
-import 'package:view360_chat/screens/chat_screen.dart';
+import 'package:view360_chat/screens/chat/chat_screen.dart';
 
-import '../main.dart';
-import '../service/chat_api.dart';
-import '../socket/socket.dart';
+import '../../main.dart';
+import '../../service/chat_api.dart';
+import '../../socket/socket.dart';
 
 class ChatRegisterPage extends StatefulWidget {
   const ChatRegisterPage({super.key});
@@ -114,7 +114,7 @@ class _ChatRegisterPageState extends State<ChatRegisterPage> {
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-                      initialCountryCode: 'AE',
+                      initialCountryCode: 'SA',
                       onChanged: (phone) {
                         _phoneNumber = phone.completeNumber;
                         log('Phone: $_phoneNumber');

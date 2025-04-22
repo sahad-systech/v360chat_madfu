@@ -2,7 +2,7 @@ import 'dart:developer';
 
 import 'package:socket_io_client/socket_io_client.dart' as io;
 
-import '../screens/chat_screen.dart';
+import '../screens/chat/chat_screen.dart';
 
 // class SocketManager {
 //   static final SocketManager _instance = SocketManager._internal();
