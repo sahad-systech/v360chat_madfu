@@ -1,11 +1,10 @@
-import 'dart:convert';
 import 'dart:developer';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:file_picker/file_picker.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:view360_chat/model/chat_response.dart';
 import 'package:view360_chat/screens/chat/widgets/chat_mini_container.dart';
 
 import '../../service/chat_api.dart';
@@ -43,7 +42,7 @@ class ChatScreenState extends State<ChatScreen> {
 
   final ImagePicker _imagePicker = ImagePicker();
 
-  List<Map<String, dynamic>> _messages = [];
+  final List<Map<String, dynamic>> _messages = [];
 
   List<PlatformFile> selectedFiles = [];
 
@@ -55,9 +54,14 @@ class ChatScreenState extends State<ChatScreen> {
 
     ChatScreenController.chatKey = widget.key as GlobalKey<ChatScreenState>?;
 
-    fetchMessage().then((value) {
+    ChatService.fetchMessages(customerId: widget.customerId).then((value) {
+      log(value.messages.length.toString());
+      log(value.error.toString());
+      log(value.success.toString());
       setState(() {
-        _messages = value;
+        for (var element in value.messages) {
+          _messages.add({'text': element.text, 'isMe': element.isMe});
+        }
       });
 
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -172,39 +176,37 @@ class ChatScreenState extends State<ChatScreen> {
     );
   }
 
-  Future<List<Map<String, dynamic>>> fetchMessage() async {
-    List<Map<String, dynamic>> chatList = [];
-    final Uri url = Uri.parse(
-        'https://webchat.systech.ae/widgetapi/messages/allMessages/${widget.customerId}');
-    final header = {'app-id': '67c6a1e7ce56d3d6fa748ab6d9af3fd7'};
+  // Future<List<Map<String, dynamic>>> fetchMessage() async {
+  //   List<Map<String, dynamic>> chatList = [];
+  //   final Uri url = Uri.parse(
+  //       'https://webchat.systech.ae/widgetapi/messages/allMessages/${widget.customerId}');
+  //   final header = {'app-id': '67c6a1e7ce56d3d6fa748ab6d9af3fd7'};
 
-    try {
-      final response = await http.get(url, headers: header);
+  //   try {
+  //     final response = await http.get(url, headers: header);
 
-      if (response.statusCode == 200) {
-        final Map<String, dynamic> data = jsonDecode(response.body);
-        for (var element in data['data']) {
-          chatList.add({
-            "text": element['content'],
-            "isMe": element['senderType'] != "user"
-          });
-        }
-      } else {
-        throw Exception('Error - status code ${response.statusCode}');
-      }
-    } catch (e) {
-      log("Exception caught: $e");
-      throw Exception("Exception: ${e.toString()}");
-    }
+  //     if (response.statusCode == 200) {
+  //       final Map<String, dynamic> data = jsonDecode(response.body);
+  //       for (var element in data['data']) {
+  //         chatList.add({
+  //           "text": element['content'],
+  //           "isMe": element['senderType'] != "user"
+  //         });
+  //       }
+  //     } else {
+  //       throw Exception('Error - status code ${response.statusCode}');
+  //     }
+  //   } catch (e) {
+  //     log("Exception caught: $e");
+  //     throw Exception("Exception: ${e.toString()}");
+  //   }
 
-    return chatList;
-  }
+  //   return chatList;
+  // }
 
   @override
   Widget build(BuildContext context) {
     final media = MediaQuery.of(context).size;
-    log(_imagePicker.toString());
-    log(selectedFiles.toString());
     return Scaffold(
       body: Column(
         children: [
@@ -308,22 +310,19 @@ class ChatScreenState extends State<ChatScreen> {
                           _messageController.text.trim() != '') {
                         setState(() => _isSending = true);
 
-                        final Map<String, String> status =
-                            await ChatService.sendChatMessageDataSource(
+                        final ChatMessageResponse status =
+                            await ChatService.sendChatMessage(
                           selectedFiles:
                               selectedFiles.isEmpty ? null : selectedFiles,
-                          customerphone: widget.customerphone ?? '',
+                          customerPhone: widget.customerphone ?? '',
                           chatContent: _messageController.text.trim(),
                           chatId: widget.chatId,
-                          messageUID:
-                              DateTime.now().millisecondsSinceEpoch.toString(),
-                          socketId: widget.socketId,
+                          socketId: SocketManager().socket.id ?? '',
                           customerName: widget.customerName,
                           customerEmail: widget.customerEmail ?? '',
-                          createdAt: DateTime.now().toString(),
                         );
 
-                        if (status['status'] == 'true') {
+                        if (status.success) {
                           setState(() {
                             _messages.add({
                               'text': _messageController.text.trim(),

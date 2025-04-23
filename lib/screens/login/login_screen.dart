@@ -2,6 +2,7 @@ import 'dart:developer';
 import 'package:flutter/material.dart';
 import 'package:intl_phone_field/intl_phone_field.dart';
 import 'package:socket_io_client/socket_io_client.dart';
+import 'package:view360_chat/model/chat_response.dart';
 import 'package:view360_chat/screens/chat/chat_screen.dart';
 
 import '../../main.dart';
@@ -24,17 +25,22 @@ class _ChatRegisterPageState extends State<ChatRegisterPage> {
   String? _phoneNumberValidation;
   late String socketId;
 
+  late SocketManager socketManager = SocketManager();
+
   @override
   void initState() {
     super.initState();
-
-    SocketManager().connect();
-
-    SocketManager().socket.onConnect((_) {
+    socketManager.connect(onMessage: (content, filePaths, data) {
+      log('message received is working in socket $data');
+      if (ChatScreenController.chatKey?.currentState != null) {
+        ChatScreenController.chatKey?.currentState?.reciveMessage(
+            content.toString(), (filePaths as List<dynamic>).cast<String>());
+      }
+    });
+    socketManager.socket.onConnect((_) {
       setState(() {
-        socketId = SocketManager().socket.id ?? '';
+        socketId = socketManager.socket.id!;
       });
-      log('Assigned socketId: $socketId');
     });
   }
 
@@ -119,7 +125,6 @@ class _ChatRegisterPageState extends State<ChatRegisterPage> {
                       onChanged: (phone) {
                         _phoneNumber = phone.completeNumber;
                         _phoneNumberValidation = phone.number;
-                        log('Phone: $_phoneNumberValidation');
                       },
                     ),
                     SizedBox(height: media.height * 0.02),
@@ -195,27 +200,23 @@ class _ChatRegisterPageState extends State<ChatRegisterPage> {
                           log('Description: ${_descController.text}');
                           final String chatId =
                               DateTime.now().millisecondsSinceEpoch.toString();
-                          final Map<String, String> status =
-                              await ChatService.sendChatMessageDataSource(
-                            customerphone: phone,
+                          final ChatMessageResponse status =
+                              await ChatService.sendChatMessage(
+                            customerPhone: phone,
                             chatContent: _descController.text,
                             chatId: chatId,
-                            messageUID: DateTime.now()
-                                .millisecondsSinceEpoch
-                                .toString(),
                             socketId: socketId,
                             customerName: _nameController.text,
                             customerEmail: email,
-                            createdAt: DateTime.now().toString(),
                           );
 
-                          if (status['status'] == 'true') {
+                          if (status.success) {
                             // ignore: use_build_context_synchronously
                             Navigator.of(context).pushAndRemoveUntil(
                                 MaterialPageRoute(
                                     builder: (_) => ChatScreen(
                                           key: chatScreenKey,
-                                          customerId: status['id']!,
+                                          customerId: status.messageId ?? '',
                                           socketId: socketId,
                                           customerName: _nameController.text,
                                           chatId: chatId,
