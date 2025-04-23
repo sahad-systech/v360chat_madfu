@@ -203,7 +203,8 @@ class ChatScreenState extends State<ChatScreen> {
   @override
   Widget build(BuildContext context) {
     final media = MediaQuery.of(context).size;
-
+    log(_imagePicker.toString());
+    log(selectedFiles.toString());
     return Scaffold(
       body: Column(
         children: [
@@ -275,7 +276,16 @@ class ChatScreenState extends State<ChatScreen> {
                 ),
                 const SizedBox(width: 8),
                 if (selectedFiles.isNotEmpty)
-                  Icon(Icons.insert_drive_file_sharp, color: Colors.grey),
+                  Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                          onTap: () {
+                            setState(() {
+                              selectedFiles.clear();
+                            });
+                          },
+                          child: Icon(Icons.insert_drive_file_sharp,
+                              color: Colors.grey))),
                 IconButton(
                   onPressed: () => showChatBottomSheet(
                     context,
@@ -299,9 +309,9 @@ class ChatScreenState extends State<ChatScreen> {
                         setState(() => _isSending = true);
 
                         final Map<String, String> status =
-                            await ChatApi.sendChatMessageDataSource(
-                          // selectedFiles:
-                          //     selectedFiles.isEmpty ? null : selectedFiles,
+                            await ChatService.sendChatMessageDataSource(
+                          selectedFiles:
+                              selectedFiles.isEmpty ? null : selectedFiles,
                           customerphone: widget.customerphone ?? '',
                           chatContent: _messageController.text.trim(),
                           chatId: widget.chatId,

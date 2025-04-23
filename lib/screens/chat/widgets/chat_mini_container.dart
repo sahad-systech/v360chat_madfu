@@ -73,7 +73,7 @@ class ChatMiniContainer extends StatelessWidget {
                             case 'jpeg':
                             case 'png':
                               return Image.network(
-                                  "baseurl{documentList[index]}");
+                                  "https://syscare.systech.ae${documentList![index]}");
                             case 'pdf':
                               return Stack(
                                 children: [

@@ -196,7 +196,7 @@ class _ChatRegisterPageState extends State<ChatRegisterPage> {
                           final String chatId =
                               DateTime.now().millisecondsSinceEpoch.toString();
                           final Map<String, String> status =
-                              await ChatApi.sendChatMessageDataSource(
+                              await ChatService.sendChatMessageDataSource(
                             customerphone: phone,
                             chatContent: _descController.text,
                             chatId: chatId,
