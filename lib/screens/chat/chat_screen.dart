@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:file_picker/file_picker.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:view360_chat/screens/chat/widgets/chat_mini_container.dart';
 
 import '../../service/chat_api.dart';
 import '../../socket/socket.dart';
@@ -81,9 +82,9 @@ class ChatScreenState extends State<ChatScreen> {
     }
   }
 
-  void reciveMessage(String message) {
+  void reciveMessage(String message, List<String> files) {
     setState(() {
-      _messages.add({'text': message, 'isMe': false});
+      _messages.add({'text': message, 'isMe': false, 'files': files});
     });
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -185,7 +186,7 @@ class ChatScreenState extends State<ChatScreen> {
         for (var element in data['data']) {
           chatList.add({
             "text": element['content'],
-            "isMe": element['senderType'] == "user"
+            "isMe": element['senderType'] != "user"
           });
         }
       } else {
@@ -250,31 +251,10 @@ class ChatScreenState extends State<ChatScreen> {
               itemCount: _messages.length,
               itemBuilder: (context, index) {
                 final msg = _messages[index];
-                return Align(
-                  alignment: msg['isMe']
-                      ? Alignment.centerRight
-                      : Alignment.centerLeft,
-                  child: Container(
-                    height: MediaQuery.of(context).size.height * 0.06,
-                    constraints: const BoxConstraints(maxWidth: 200),
-                    margin: const EdgeInsets.symmetric(vertical: 4),
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 12),
-                    decoration: BoxDecoration(
-                      color: msg['isMe']
-                          ? const Color.fromARGB(255, 33, 51, 243)
-                          : Colors.grey[300],
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      msg['text'],
-                      style: TextStyle(
-                        color: msg['isMe'] ? Colors.white : Colors.black,
-                        fontSize: MediaQuery.of(context).size.width * 0.04,
-                      ),
-                    ),
-                  ),
-                );
+                return ChatMiniContainer(
+                    isSender: msg['isMe'],
+                    documentList: msg['files'],
+                    message: msg['text']);
               },
             ),
           ),

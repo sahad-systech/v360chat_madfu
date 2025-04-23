@@ -21,6 +21,7 @@ class _ChatRegisterPageState extends State<ChatRegisterPage> {
   final _emailController = TextEditingController();
   final _descController = TextEditingController();
   String? _phoneNumber;
+  String? _phoneNumberValidation;
   late String socketId;
 
   @override
@@ -117,7 +118,8 @@ class _ChatRegisterPageState extends State<ChatRegisterPage> {
                       initialCountryCode: 'SA',
                       onChanged: (phone) {
                         _phoneNumber = phone.completeNumber;
-                        log('Phone: $_phoneNumber');
+                        _phoneNumberValidation = phone.number;
+                        log('Phone: $_phoneNumberValidation');
                       },
                     ),
                     SizedBox(height: media.height * 0.02),
@@ -167,17 +169,19 @@ class _ChatRegisterPageState extends State<ChatRegisterPage> {
                               _formKey.currentState?.validate() ?? false;
 
                           final phone = _phoneNumber?.trim() ?? '';
+                          final phonevalid =
+                              _phoneNumberValidation?.trim() ?? '';
                           final email = _emailController.text.trim();
 
                           if (!isValid) return;
 
                           // Custom logic: exactly one of phone or email is required
-                          if ((phone.isEmpty && email.isEmpty) ||
-                              (phone.isNotEmpty && email.isNotEmpty)) {
+
+                          if (phonevalid.isEmpty && email.isEmpty) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
                                 content: Text(
-                                  'Please provide only one: either a contact number or an email address.',
+                                  'Please provide at least one: a contact number or an email address.',
                                 ),
                               ),
                             );
@@ -257,6 +261,7 @@ class _ChatRegisterPageState extends State<ChatRegisterPage> {
     String? Function(String?)? validator,
   }) {
     return TextFormField(
+      autovalidateMode: AutovalidateMode.onUserInteraction,
       controller: controller,
       maxLines: maxLines,
       validator: validator,

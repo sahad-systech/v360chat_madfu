@@ -67,7 +67,6 @@ class ChatApi {
 
       if (response.statusCode == 200 || response.statusCode == 304) {
         final responseData = jsonDecode(responseString);
-        log("Response: $responseData");
 
         return {
           "status": responseData['status'].toString(),

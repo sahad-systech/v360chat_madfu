@@ -83,10 +83,11 @@ class SocketManager {
     _socket.off('message received'); // Remove previous listener
 
     _socket.on('message received', (data) {
-      log('message received is working in socket');
+      log('message received is working in socket file ${data["file_path"]}');
       if (ChatScreenController.chatKey?.currentState != null) {
-        ChatScreenController.chatKey?.currentState
-            ?.reciveMessage(data["content"].toString());
+        ChatScreenController.chatKey?.currentState?.reciveMessage(
+            data["content"].toString(),
+            (data["file_path"] as List<dynamic>).cast<String>());
       }
     });
   }
