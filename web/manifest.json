@@ -1,6 +1,6 @@
 {
-    "name": "view360_chat",
-    "short_name": "view360_chat",
+    "name": "madfu_demo",
+    "short_name": "madfu_demo",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

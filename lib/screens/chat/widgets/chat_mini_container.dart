@@ -1,10 +1,12 @@
-import 'dart:developer';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:madfu_demo/core/app_info.dart';
 
 class ChatMiniContainer extends StatelessWidget {
   const ChatMiniContainer({
     super.key,
+    required this.isLocalFile,
     required this.isSender,
     required this.documentList,
     required this.message,
@@ -13,13 +15,14 @@ class ChatMiniContainer extends StatelessWidget {
   final bool isSender;
   final String message;
   final List<String>? documentList;
+  final bool isLocalFile;
 
   @override
   Widget build(BuildContext context) {
     // Get screen width and height for responsive design
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
-    log(documentList.toString());
+
     return Column(
       crossAxisAlignment:
           isSender ? CrossAxisAlignment.end : CrossAxisAlignment.start,
@@ -72,8 +75,17 @@ class ChatMiniContainer extends StatelessWidget {
                             case 'jpg':
                             case 'jpeg':
                             case 'png':
-                              return Image.network(
-                                  "https://syscare.systech.ae${documentList![index]}");
+                              return isLocalFile
+                                  ? Padding(
+                                      padding: const EdgeInsets.all(8.0),
+                                      child: Image.file(
+                                          File(documentList![index])),
+                                    )
+                                  : Padding(
+                                      padding: const EdgeInsets.all(8.0),
+                                      child: Image.network(
+                                          "$mediaUrl${documentList![index]}"),
+                                    );
                             case 'pdf':
                               return Stack(
                                 children: [
@@ -226,7 +238,7 @@ class ChatMiniContainer extends StatelessWidget {
                         textAlign: TextAlign.start,
                         style: TextStyle(
                           color: isSender ? Colors.white : Colors.black87,
-                          // fontSize: screenWidth * 0.04,
+                          fontSize: screenWidth * 0.04,
                         ),
                       ),
                   ],

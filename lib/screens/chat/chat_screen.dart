@@ -4,11 +4,10 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:view360_chat/model/chat_response.dart';
-import 'package:view360_chat/screens/chat/widgets/chat_mini_container.dart';
+import 'package:madfu_demo/core/app_info.dart';
 
-import '../../service/chat_api.dart';
-import '../../socket/socket.dart';
+import 'package:view360_chat/view360_chat.dart';
+import 'widgets/chat_mini_container.dart';
 import 'widgets/doc_piker.dart';
 
 class ChatScreenController {
@@ -16,20 +15,11 @@ class ChatScreenController {
 }
 
 class ChatScreen extends StatefulWidget {
-  final String customerId;
-  final String socketId;
-  final String customerName;
-  final String? customerEmail;
-  final String? customerphone;
-  final String chatId;
+  final bool isInQueue;
+
   const ChatScreen({
+    this.isInQueue = false,
     super.key,
-    required this.customerId,
-    required this.socketId,
-    required this.customerName,
-    this.customerEmail,
-    this.customerphone,
-    required this.chatId,
   });
 
   @override
@@ -45,35 +35,42 @@ class ChatScreenState extends State<ChatScreen> {
   final List<Map<String, dynamic>> _messages = [];
 
   List<PlatformFile> selectedFiles = [];
+  View360ChatPrefs prefs = View360ChatPrefs();
 
   bool _isSending = false;
+  final chatService = ChatService(
+    baseUrl: baseUrl,
+    appId: appId,
+  );
+  final socketManager = SocketManager();
 
   @override
   void initState() {
     super.initState();
 
     ChatScreenController.chatKey = widget.key as GlobalKey<ChatScreenState>?;
-
-    ChatService.fetchMessages(customerId: widget.customerId).then((value) {
-      log(value.messages.length.toString());
-      log(value.error.toString());
-      log(value.success.toString());
-      setState(() {
-        for (var element in value.messages) {
-          _messages.add({'text': element.text, 'isMe': element.isMe});
-        }
-      });
-
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _scrollToBottom();
+    prefs.getCustomerId().then((value) {
+      ChatService(
+              baseUrl: 'https://webchat.systech.ae',
+              appId: '67c6a1e7ce56d3d6fa748ab6d9af3fd7')
+          .fetchMessages(customerId: value)
+          .then((value) {
+        setState(() {
+          for (var element in value.messages) {
+            // log(element.id.toString());
+            // log(element.content.toString());
+            // log(element.createdAt.toString());
+            // log(element.senderType.toString());
+            // log(element.files.toString());
+            _messages.add({
+              'text': element.content,
+              'isMe': element.senderType == 'user' ? false : true,
+              'files': element.files
+            });
+          }
+        });
       });
     });
-  }
-
-  @override
-  void dispose() {
-    SocketManager().disconnect();
-    super.dispose();
   }
 
   void _scrollToBottom() {
@@ -176,34 +173,6 @@ class ChatScreenState extends State<ChatScreen> {
     );
   }
 
-  // Future<List<Map<String, dynamic>>> fetchMessage() async {
-  //   List<Map<String, dynamic>> chatList = [];
-  //   final Uri url = Uri.parse(
-  //       'https://webchat.systech.ae/widgetapi/messages/allMessages/${widget.customerId}');
-  //   final header = {'app-id': '67c6a1e7ce56d3d6fa748ab6d9af3fd7'};
-
-  //   try {
-  //     final response = await http.get(url, headers: header);
-
-  //     if (response.statusCode == 200) {
-  //       final Map<String, dynamic> data = jsonDecode(response.body);
-  //       for (var element in data['data']) {
-  //         chatList.add({
-  //           "text": element['content'],
-  //           "isMe": element['senderType'] != "user"
-  //         });
-  //       }
-  //     } else {
-  //       throw Exception('Error - status code ${response.statusCode}');
-  //     }
-  //   } catch (e) {
-  //     log("Exception caught: $e");
-  //     throw Exception("Exception: ${e.toString()}");
-  //   }
-
-  //   return chatList;
-  // }
-
   @override
   Widget build(BuildContext context) {
     final media = MediaQuery.of(context).size;
@@ -229,7 +198,7 @@ class ChatScreenState extends State<ChatScreen> {
                 ),
                 SizedBox(height: media.height * 0.02),
                 Text(
-                  'Hi ${widget.customerName}',
+                  'Hi',
                   style: TextStyle(
                     fontSize: media.width * 0.07,
                     fontWeight: FontWeight.bold,
@@ -247,6 +216,16 @@ class ChatScreenState extends State<ChatScreen> {
               ],
             ),
           ),
+          if (widget.isInQueue)
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: ChatMiniContainer(
+                isLocalFile: true,
+                isSender: false,
+                documentList: [],
+                message: "An agent will be with you shortly",
+              ),
+            ),
           Expanded(
             child: ListView.builder(
               controller: _scrollController,
@@ -255,8 +234,9 @@ class ChatScreenState extends State<ChatScreen> {
               itemBuilder: (context, index) {
                 final msg = _messages[index];
                 return ChatMiniContainer(
+                    isLocalFile: msg['filePath'] != null,
                     isSender: msg['isMe'],
-                    documentList: msg['files'],
+                    documentList: msg['filePath'] ?? msg['files'],
                     message: msg['text']);
               },
             ),
@@ -309,24 +289,29 @@ class ChatScreenState extends State<ChatScreen> {
                       if (_messageController.text.isNotEmpty &&
                           _messageController.text.trim() != '') {
                         setState(() => _isSending = true);
-
-                        final ChatMessageResponse status =
-                            await ChatService.sendChatMessage(
-                          selectedFiles:
-                              selectedFiles.isEmpty ? null : selectedFiles,
-                          customerPhone: widget.customerphone ?? '',
+                        final List<String> filepaths = [];
+                        if (selectedFiles.isNotEmpty) {
+                          for (var item in selectedFiles) {
+                            filepaths.add(item.path!);
+                          }
+                        }
+                        final response =
+                            await ChatService(appId: appId, baseUrl: baseUrl)
+                                .sendChatMessage(
+                          filePath: filepaths,
                           chatContent: _messageController.text.trim(),
-                          chatId: widget.chatId,
-                          socketId: SocketManager().socket.id ?? '',
-                          customerName: widget.customerName,
-                          customerEmail: widget.customerEmail ?? '',
                         );
-
-                        if (status.success) {
+                        log("error: ${response.error}");
+                        if (response.success) {
                           setState(() {
+                            final List<String> filePath = [];
+                            for (var item in selectedFiles) {
+                              filePath.add(item.path!);
+                            }
                             _messages.add({
                               'text': _messageController.text.trim(),
                               'isMe': true,
+                              'filePath': filePath
                             });
                             _messageController.clear();
                             selectedFiles.clear();

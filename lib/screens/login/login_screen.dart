@@ -1,13 +1,12 @@
 import 'dart:developer';
 import 'package:flutter/material.dart';
 import 'package:intl_phone_field/intl_phone_field.dart';
-import 'package:socket_io_client/socket_io_client.dart';
-import 'package:view360_chat/model/chat_response.dart';
-import 'package:view360_chat/screens/chat/chat_screen.dart';
+import 'package:madfu_demo/core/app_info.dart';
+import 'package:madfu_demo/core/local_storage.dart';
 
 import '../../main.dart';
-import '../../service/chat_api.dart';
-import '../../socket/socket.dart';
+import 'package:view360_chat/view360_chat.dart';
+import '../chat/chat_screen.dart';
 
 class ChatRegisterPage extends StatefulWidget {
   const ChatRegisterPage({super.key});
@@ -23,25 +22,35 @@ class _ChatRegisterPageState extends State<ChatRegisterPage> {
   final _descController = TextEditingController();
   String? _phoneNumber;
   String? _phoneNumberValidation;
-  late String socketId;
-
-  late SocketManager socketManager = SocketManager();
+  final socketManager = SocketManager();
 
   @override
   void initState() {
+    log('initState');
+    socketManager.connect(
+      baseUrl: baseUrl,
+      onMessage: ({
+        required content,
+        required createdAt,
+        filePaths,
+        required response,
+        required senderType,
+      }) {
+        log('content: $content');
+        log('createdAt: $createdAt');
+        log('filePaths: $filePaths');
+        log('response: $response');
+        log('senderType: $senderType');
+
+        if (ChatScreenController.chatKey?.currentState != null) {
+          ChatScreenController.chatKey?.currentState?.reciveMessage(
+              content.toString(),
+              (filePaths == null ? [] : filePaths as List<dynamic>)
+                  .cast<String>());
+        }
+      },
+    );
     super.initState();
-    socketManager.connect(onMessage: (content, filePaths, data) {
-      log('message received is working in socket $data');
-      if (ChatScreenController.chatKey?.currentState != null) {
-        ChatScreenController.chatKey?.currentState?.reciveMessage(
-            content.toString(), (filePaths as List<dynamic>).cast<String>());
-      }
-    });
-    socketManager.socket.onConnect((_) {
-      setState(() {
-        socketId = socketManager.socket.id!;
-      });
-    });
   }
 
   @override
@@ -192,39 +201,32 @@ class _ChatRegisterPageState extends State<ChatRegisterPage> {
                             );
                             return;
                           }
+                          log("email $email");
+                          log("phone $phone");
+                          log("name ${_nameController.text}");
+                          log("desc ${_descController.text}");
 
-                          // Passed all checks
-                          log('Name: ${_nameController.text}');
-                          log('Phone: $phone');
-                          log('Email: $email');
-                          log('Description: ${_descController.text}');
-                          final String chatId =
-                              DateTime.now().millisecondsSinceEpoch.toString();
-                          final ChatMessageResponse status =
-                              await ChatService.sendChatMessage(
-                            customerPhone: phone,
+                          final response =
+                              await ChatService(baseUrl: baseUrl, appId: appId)
+                                  .createChatSession(
                             chatContent: _descController.text,
-                            chatId: chatId,
-                            socketId: socketId,
                             customerName: _nameController.text,
                             customerEmail: email,
+                            customerPhone: phone,
                           );
 
-                          if (status.success) {
+                          if (response.success) {
+                            LocalStorage.setIsLogin(true);
                             // ignore: use_build_context_synchronously
                             Navigator.of(context).pushAndRemoveUntil(
                                 MaterialPageRoute(
                                     builder: (_) => ChatScreen(
+                                          isInQueue: response.isInQueue,
                                           key: chatScreenKey,
-                                          customerId: status.messageId ?? '',
-                                          socketId: socketId,
-                                          customerName: _nameController.text,
-                                          chatId: chatId,
-                                          customerEmail: email,
-                                          customerphone: phone,
                                         )),
                                 (_) => false);
                           } else {
+                            // ignore: use_build_context_synchronously
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
                                 content: Text(
