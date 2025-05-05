@@ -5,7 +5,8 @@ import 'package:madfu_demo/core/app_info.dart';
 import 'package:madfu_demo/core/local_storage.dart';
 
 import '../../main.dart';
-import 'package:view360_chat/view360_chat.dart';
+import '../../package/src/api/api_service.dart';
+import '../../package/src/socket/socket_managet.dart';
 import '../chat/chat_screen.dart';
 
 class ChatRegisterPage extends StatefulWidget {
@@ -26,7 +27,6 @@ class _ChatRegisterPageState extends State<ChatRegisterPage> {
 
   @override
   void initState() {
-    log('initState');
     socketManager.connect(
       baseUrl: baseUrl,
       onMessage: ({
@@ -36,11 +36,11 @@ class _ChatRegisterPageState extends State<ChatRegisterPage> {
         required response,
         required senderType,
       }) {
-        log('content: $content');
-        log('createdAt: $createdAt');
-        log('filePaths: $filePaths');
-        log('response: $response');
-        log('senderType: $senderType');
+        // log('content: $content');
+        // log('createdAt: $createdAt');
+        // log('filePaths: $filePaths');
+        // log('response: $response');
+        // log('senderType: $senderType');
 
         if (ChatScreenController.chatKey?.currentState != null) {
           ChatScreenController.chatKey?.currentState?.reciveMessage(

@@ -6,7 +6,9 @@ import 'package:file_picker/file_picker.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:madfu_demo/core/app_info.dart';
 
-import 'package:view360_chat/view360_chat.dart';
+import '../../package/src/api/api_service.dart';
+import '../../package/src/local/local_storage.dart';
+import '../../package/src/socket/socket_managet.dart';
 import 'widgets/chat_mini_container.dart';
 import 'widgets/doc_piker.dart';
 
@@ -302,7 +304,9 @@ class ChatScreenState extends State<ChatScreen> {
                           chatContent: _messageController.text.trim(),
                         );
                         log("error: ${response.error}");
-                        if (response.success) {
+                        log("status: ${response.status}");
+                        log("message: ${response.message}");
+                        if (response.status) {
                           setState(() {
                             final List<String> filePath = [];
                             for (var item in selectedFiles) {
