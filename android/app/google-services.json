@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "773919528895",
+    "project_id": "v360chatnotification",
+    "storage_bucket": "v360chatnotification.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:773919528895:android:806943d85adfbe1f61b30a",
+        "android_client_info": {
+          "package_name": "com.example.madfu_demo"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDsAz50qF1VGPhcEN9Gwn8o6q6NsVBGS3s"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

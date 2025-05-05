@@ -1,9 +1,24 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:madfu_demo/screens/login/login_screen.dart';
 
+import 'firebase_options.dart';
 import 'screens/chat/chat_screen.dart';
+import 'services/firebase_messaging_service.dart';
+import 'services/local_notification_services.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  final localNotificationsService = LocalNotificationsService.instance();
+  await localNotificationsService.init();
+
+  final firebaseMessagingService = FirebaseMessagingService.instance();
+  await firebaseMessagingService.init(
+      localNotificationsService: localNotificationsService);
+
   runApp(const MyApp());
 }
 
