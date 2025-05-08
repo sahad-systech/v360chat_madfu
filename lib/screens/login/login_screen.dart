@@ -2,11 +2,9 @@ import 'dart:developer';
 import 'package:flutter/material.dart';
 import 'package:intl_phone_field/intl_phone_field.dart';
 import 'package:madfu_demo/core/app_info.dart';
-import 'package:madfu_demo/core/local_storage.dart';
+import 'package:view360_chat/view360_chat.dart';
 
 import '../../main.dart';
-import '../../package/src/api/api_service.dart';
-import '../../package/src/socket/socket_managet.dart';
 import '../chat/chat_screen.dart';
 
 class ChatRegisterPage extends StatefulWidget {
@@ -201,10 +199,10 @@ class _ChatRegisterPageState extends State<ChatRegisterPage> {
                             );
                             return;
                           }
-                          log("email $email");
-                          log("phone $phone");
-                          log("name ${_nameController.text}");
-                          log("desc ${_descController.text}");
+                          // log("email $email");
+                          // log("phone $phone");
+                          // log("name ${_nameController.text}");
+                          // log("desc ${_descController.text}");
 
                           final response =
                               await ChatService(baseUrl: baseUrl, appId: appId)
@@ -215,8 +213,11 @@ class _ChatRegisterPageState extends State<ChatRegisterPage> {
                             customerPhone: phone,
                           );
 
+                          log("success ${response.success}");
+                          log("isInQueue ${response.isInQueue}");
+                          log("error ${response.error}");
+
                           if (response.success) {
-                            LocalStorage.setIsLogin(true);
                             // ignore: use_build_context_synchronously
                             Navigator.of(context).pushAndRemoveUntil(
                                 MaterialPageRoute(

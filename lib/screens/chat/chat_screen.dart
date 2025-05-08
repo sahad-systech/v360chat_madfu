@@ -5,10 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:madfu_demo/core/app_info.dart';
+import 'package:view360_chat/view360_chat.dart';
 
-import '../../package/src/api/api_service.dart';
-import '../../package/src/local/local_storage.dart';
-import '../../package/src/socket/socket_managet.dart';
 import 'widgets/chat_mini_container.dart';
 import 'widgets/doc_piker.dart';
 
@@ -37,7 +35,6 @@ class ChatScreenState extends State<ChatScreen> {
   final List<Map<String, dynamic>> _messages = [];
 
   List<PlatformFile> selectedFiles = [];
-  View360ChatPrefs prefs = View360ChatPrefs();
 
   bool _isSending = false;
   final chatService = ChatService(
@@ -51,26 +48,20 @@ class ChatScreenState extends State<ChatScreen> {
     super.initState();
 
     ChatScreenController.chatKey = widget.key as GlobalKey<ChatScreenState>?;
-    prefs.getCustomerId().then((value) {
-      ChatService(
-              baseUrl: 'https://webchat.systech.ae',
-              appId: '67c6a1e7ce56d3d6fa748ab6d9af3fd7')
-          .fetchMessages(customerId: value)
-          .then((value) {
-        setState(() {
-          for (var element in value.messages) {
-            // log(element.id.toString());
-            // log(element.content.toString());
-            // log(element.createdAt.toString());
-            // log(element.senderType.toString());
-            // log(element.files.toString());
-            _messages.add({
-              'text': element.content,
-              'isMe': element.senderType == 'user' ? false : true,
-              'files': element.files
-            });
-          }
-        });
+    ChatService(baseUrl: baseUrl, appId: appId).fetchMessages().then((value) {
+      setState(() {
+        for (var element in value.messages) {
+          log(element.id.toString());
+          log(element.content.toString());
+          log(element.createdAt.toString());
+          log(element.senderType.toString());
+          log(element.files.toString());
+          _messages.add({
+            'text': element.content,
+            'isMe': element.senderType == 'user' ? false : true,
+            'files': element.files
+          });
+        }
       });
     });
   }
