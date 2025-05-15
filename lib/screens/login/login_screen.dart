@@ -2,6 +2,7 @@ import 'dart:developer';
 import 'package:flutter/material.dart';
 import 'package:intl_phone_field/intl_phone_field.dart';
 import 'package:madfu_demo/core/app_info.dart';
+import 'package:madfu_demo/core/local_storage.dart';
 import 'package:view360_chat/view360_chat.dart';
 
 import '../../main.dart';
@@ -21,12 +22,16 @@ class _ChatRegisterPageState extends State<ChatRegisterPage> {
   final _descController = TextEditingController();
   String? _phoneNumber;
   String? _phoneNumberValidation;
+
   final socketManager = SocketManager();
 
   @override
   void initState() {
     socketManager.connect(
       baseUrl: baseUrl,
+      onConnected: () {
+        log('connected to socket server successfully');
+      },
       onMessage: ({
         required content,
         required createdAt,
@@ -34,18 +39,17 @@ class _ChatRegisterPageState extends State<ChatRegisterPage> {
         required response,
         required senderType,
       }) {
-        // log('content: $content');
-        // log('createdAt: $createdAt');
-        // log('filePaths: $filePaths');
-        // log('response: $response');
-        // log('senderType: $senderType');
-
         if (ChatScreenController.chatKey?.currentState != null) {
           ChatScreenController.chatKey?.currentState?.reciveMessage(
               content.toString(),
               (filePaths == null ? [] : filePaths as List<dynamic>)
                   .cast<String>());
         }
+        log('content: $content');
+        log('createdAt: $createdAt');
+        log('filePaths: $filePaths');
+        log('response: $response');
+        log('senderType: $senderType');
       },
     );
     super.initState();
@@ -163,9 +167,7 @@ class _ChatRegisterPageState extends State<ChatRegisterPage> {
                       validator: (value) =>
                           value!.isEmpty ? 'Description is required' : null,
                     ),
-                    SizedBox(height: media.height * 0.04),
-
-                    // Send Button
+                    SizedBox(height: media.height * 0.04), // Send Button
                     SizedBox(
                       width: double.infinity,
                       height: media.height * 0.07,
@@ -218,11 +220,11 @@ class _ChatRegisterPageState extends State<ChatRegisterPage> {
                           log("error ${response.error}");
 
                           if (response.success) {
+                            AppLocalStore.setLoging(true);
                             // ignore: use_build_context_synchronously
                             Navigator.of(context).pushAndRemoveUntil(
                                 MaterialPageRoute(
                                     builder: (_) => ChatScreen(
-                                          isInQueue: response.isInQueue,
                                           key: chatScreenKey,
                                         )),
                                 (_) => false);

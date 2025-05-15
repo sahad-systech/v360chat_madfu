@@ -5,8 +5,10 @@ import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:madfu_demo/core/app_info.dart';
+import 'package:madfu_demo/core/local_storage.dart';
 import 'package:view360_chat/view360_chat.dart';
 
+import '../login/login_screen.dart';
 import 'widgets/chat_mini_container.dart';
 import 'widgets/doc_piker.dart';
 
@@ -15,10 +17,7 @@ class ChatScreenController {
 }
 
 class ChatScreen extends StatefulWidget {
-  final bool isInQueue;
-
   const ChatScreen({
-    this.isInQueue = false,
     super.key,
   });
 
@@ -51,11 +50,11 @@ class ChatScreenState extends State<ChatScreen> {
     ChatService(baseUrl: baseUrl, appId: appId).fetchMessages().then((value) {
       setState(() {
         for (var element in value.messages) {
-          log(element.id.toString());
-          log(element.content.toString());
-          log(element.createdAt.toString());
-          log(element.senderType.toString());
-          log(element.files.toString());
+          // log(element.id.toString());
+          // log(element.content.toString());
+          // log(element.createdAt.toString());
+          // log(element.senderType.toString());
+          // log(element.files.toString());
           _messages.add({
             'text': element.content,
             'isMe': element.senderType == 'user' ? false : true,
@@ -182,12 +181,33 @@ class ChatScreenState extends State<ChatScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Madfu',
-                  style: TextStyle(
-                    fontSize: media.width * 0.10,
-                    fontWeight: FontWeight.bold,
-                  ),
+                Row(
+                  children: [
+                    Text(
+                      'Madfu',
+                      style: TextStyle(
+                        fontSize: media.width * 0.10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Spacer(),
+                    InkWell(
+                      onTap: () {
+                        AppLocalStore.clear();
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => ChatRegisterPage(),
+                          ),
+                        );
+                      },
+                      child: Icon(
+                        Icons.logout,
+                        size: media.height * 0.04,
+                        color: Colors.black,
+                      ),
+                    ),
+                  ],
                 ),
                 SizedBox(height: media.height * 0.02),
                 Text(
@@ -209,16 +229,16 @@ class ChatScreenState extends State<ChatScreen> {
               ],
             ),
           ),
-          if (widget.isInQueue)
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: ChatMiniContainer(
-                isLocalFile: true,
-                isSender: false,
-                documentList: [],
-                message: "An agent will be with you shortly",
-              ),
-            ),
+          // if (widget.isInQueue)
+          //   Padding(
+          //     padding: const EdgeInsets.all(8.0),
+          //     child: ChatMiniContainer(
+          //       isLocalFile: true,
+          //       isSender: false,
+          //       documentList: [],
+          //       message: "An agent will be with you shortly",
+          //     ),
+          //   ),
           Expanded(
             child: ListView.builder(
               controller: _scrollController,
