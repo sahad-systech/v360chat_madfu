@@ -625,10 +625,10 @@ packages:
     dependency: "direct main"
     description:
       name: view360_chat
-      sha256: "03e8e370e9067f8e87534b10c8d5424869f07ddc8a79abba9b34da3ff3ff4f9c"
+      sha256: dd28791cb01579064f3cc3e0ea6440b37da0a793897068009004a7ebf7186bf4
       url: "https://pub.dev"
     source: hosted
-    version: "1.0.24"
+    version: "1.0.26"
   vm_service:
     dependency: transitive
     description:

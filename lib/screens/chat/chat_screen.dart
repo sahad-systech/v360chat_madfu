@@ -45,16 +45,16 @@ class ChatScreenState extends State<ChatScreen> {
   @override
   void initState() {
     super.initState();
-
     ChatScreenController.chatKey = widget.key as GlobalKey<ChatScreenState>?;
     ChatService(baseUrl: baseUrl, appId: appId).fetchMessages().then((value) {
+      log('messages length: ${value.messages.length}');
+      log('success: ${value.success}');
+      log('error: ${value.error}');
+      for (var element in value.messages) {
+        log('content: ${element.content}');
+      }
       setState(() {
         for (var element in value.messages) {
-          // log(element.id.toString());
-          // log(element.content.toString());
-          // log(element.createdAt.toString());
-          // log(element.senderType.toString());
-          // log(element.files.toString());
           _messages.add({
             'text': element.content,
             'isMe': element.senderType == 'user' ? false : true,
