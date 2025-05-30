@@ -6,6 +6,8 @@ import 'package:file_picker/file_picker.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:madfu_demo/core/app_info.dart';
 import 'package:madfu_demo/core/local_storage.dart';
+import 'package:madfu_demo/provider/chat_provider.dart';
+import 'package:provider/provider.dart';
 import 'package:view360_chat/view360_chat.dart';
 
 import '../login/login_screen.dart';
@@ -31,8 +33,6 @@ class ChatScreenState extends State<ChatScreen> {
 
   final ImagePicker _imagePicker = ImagePicker();
 
-  final List<Map<String, dynamic>> _messages = [];
-
   List<PlatformFile> selectedFiles = [];
 
   bool _isSending = false;
@@ -45,23 +45,41 @@ class ChatScreenState extends State<ChatScreen> {
   @override
   void initState() {
     super.initState();
-    ChatScreenController.chatKey = widget.key as GlobalKey<ChatScreenState>?;
+    AppLocalStore.getLogin().then((value) {
+      if (value) {
+        ChatScreenController.chatKey = GlobalKey<ChatScreenState>();
+        socketManager.connect(
+          baseUrl: baseUrl,
+          onConnected: () {
+            log('connected to socket server successfully');
+          },
+          onMessage: ({
+            required content,
+            required createdAt,
+            filePaths,
+            required response,
+            required senderType,
+          }) {
+            Provider.of<MessageList>(context, listen: false).addMessage(
+                message: content,
+                files: filePaths ?? [],
+                senderType: senderType);
+            log('response: $response');
+          },
+        );
+      }
+    });
+
     ChatService(baseUrl: baseUrl, appId: appId).fetchMessages().then((value) {
       log('messages length: ${value.messages.length}');
       log('success: ${value.success}');
       log('error: ${value.error}');
       for (var element in value.messages) {
-        log('content: ${element.content}');
+        Provider.of<MessageList>(context, listen: false).addMessage(
+            message: element.content,
+            files: element.files,
+            senderType: element.senderType);
       }
-      setState(() {
-        for (var element in value.messages) {
-          _messages.add({
-            'text': element.content,
-            'isMe': element.senderType == 'user' ? false : true,
-            'files': element.files
-          });
-        }
-      });
     });
   }
 
@@ -73,16 +91,6 @@ class ChatScreenState extends State<ChatScreen> {
         curve: Curves.easeOut,
       );
     }
-  }
-
-  void reciveMessage(String message, List<String> files) {
-    setState(() {
-      _messages.add({'text': message, 'isMe': false, 'files': files});
-    });
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _scrollToBottom();
-    });
   }
 
   Future<PlatformFile> convertXFileToPlatformFile(XFile xfile) async {
@@ -194,6 +202,8 @@ class ChatScreenState extends State<ChatScreen> {
                     InkWell(
                       onTap: () {
                         AppLocalStore.clear();
+                        Provider.of<MessageList>(context, listen: false)
+                            .clearMessages();
                         Navigator.pushReplacement(
                           context,
                           MaterialPageRoute(
@@ -229,28 +239,23 @@ class ChatScreenState extends State<ChatScreen> {
               ],
             ),
           ),
-          // if (widget.isInQueue)
-          //   Padding(
-          //     padding: const EdgeInsets.all(8.0),
-          //     child: ChatMiniContainer(
-          //       isLocalFile: true,
-          //       isSender: false,
-          //       documentList: [],
-          //       message: "An agent will be with you shortly",
-          //     ),
-          //   ),
           Expanded(
-            child: ListView.builder(
-              controller: _scrollController,
-              padding: const EdgeInsets.all(12),
-              itemCount: _messages.length,
-              itemBuilder: (context, index) {
-                final msg = _messages[index];
-                return ChatMiniContainer(
-                    isLocalFile: msg['filePath'] != null,
-                    isSender: msg['isMe'],
-                    documentList: msg['filePath'] ?? msg['files'],
-                    message: msg['text']);
+            child: Consumer<MessageList>(
+              builder: (context, value, child) {
+                return ListView.builder(
+                  controller: _scrollController,
+                  padding: const EdgeInsets.all(12),
+                  itemCount: value.messages.length,
+                  itemBuilder: (context, index) {
+                    final msg = value.messages[index];
+                    return ChatMiniContainer(
+                      isLocalFile: msg['filePath'] != null,
+                      isSender: msg['isMe'],
+                      documentList: msg['filePath'] ?? msg['files'],
+                      message: msg['text'],
+                    );
+                  },
+                );
               },
             ),
           ),
@@ -323,11 +328,12 @@ class ChatScreenState extends State<ChatScreen> {
                             for (var item in selectedFiles) {
                               filePath.add(item.path!);
                             }
-                            _messages.add({
-                              'text': _messageController.text.trim(),
-                              'isMe': true,
-                              'filePath': filePath
-                            });
+
+                            Provider.of<MessageList>(context, listen: false)
+                                .addMessage(
+                                    message: _messageController.text.trim(),
+                                    files: filePath,
+                                    senderType: 'customer');
                             _messageController.clear();
                             selectedFiles.clear();
                           });

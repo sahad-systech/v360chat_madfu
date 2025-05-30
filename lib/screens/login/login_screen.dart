@@ -3,9 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:intl_phone_field/intl_phone_field.dart';
 import 'package:madfu_demo/core/app_info.dart';
 import 'package:madfu_demo/core/local_storage.dart';
+import 'package:provider/provider.dart';
 import 'package:view360_chat/view360_chat.dart';
 
 import '../../main.dart';
+import '../../provider/chat_provider.dart';
 import '../chat/chat_screen.dart';
 
 class ChatRegisterPage extends StatefulWidget {
@@ -39,17 +41,9 @@ class _ChatRegisterPageState extends State<ChatRegisterPage> {
         required response,
         required senderType,
       }) {
-        if (ChatScreenController.chatKey?.currentState != null) {
-          ChatScreenController.chatKey?.currentState?.reciveMessage(
-              content.toString(),
-              (filePaths == null ? [] : filePaths as List<dynamic>)
-                  .cast<String>());
-        }
-        log('content: $content');
-        log('createdAt: $createdAt');
-        log('filePaths: $filePaths');
+        Provider.of<MessageList>(context, listen: false).addMessage(
+            message: content, files: filePaths ?? [], senderType: senderType);
         log('response: $response');
-        log('senderType: $senderType');
       },
     );
     super.initState();

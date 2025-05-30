@@ -3,7 +3,9 @@ import 'dart:developer';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:madfu_demo/core/local_storage.dart';
+import 'package:madfu_demo/provider/chat_provider.dart';
 import 'package:madfu_demo/screens/login/login_screen.dart';
+import 'package:provider/provider.dart';
 
 import 'firebase_options.dart';
 import 'screens/chat/chat_screen.dart';
@@ -22,7 +24,12 @@ void main() async {
   await firebaseMessagingService.init(
       localNotificationsService: localNotificationsService);
 
-  runApp(MyApp());
+  runApp(
+    ChangeNotifierProvider(
+      create: (context) => MessageList(),
+      child: const MyApp(),
+    ),
+  );
 }
 
 final GlobalKey<ChatScreenState> chatScreenKey = GlobalKey<ChatScreenState>();

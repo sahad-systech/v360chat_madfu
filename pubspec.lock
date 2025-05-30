@@ -416,6 +416,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.0.0"
+  nested:
+    dependency: transitive
+    description:
+      name: nested
+      sha256: "03bac4c528c64c95c722ec99280375a6f2fc708eec17c7b3f07253b626cd2a20"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.0.0"
   path:
     dependency: transitive
     description:
@@ -472,6 +480,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.1.8"
+  provider:
+    dependency: "direct main"
+    description:
+      name: provider
+      sha256: "4abbd070a04e9ddc287673bf5a030c7ca8b685ff70218720abab8b092f53dd84"
+      url: "https://pub.dev"
+    source: hosted
+    version: "6.1.5"
   shared_preferences:
     dependency: "direct main"
     description:
@@ -625,10 +641,10 @@ packages:
     dependency: "direct main"
     description:
       name: view360_chat
-      sha256: dd28791cb01579064f3cc3e0ea6440b37da0a793897068009004a7ebf7186bf4
+      sha256: bd007b8e394a7a0542f466334bcafe884a0f517e214178b87bcc556724d37a20
       url: "https://pub.dev"
     source: hosted
-    version: "1.0.26"
+    version: "1.0.27"
   vm_service:
     dependency: transitive
     description:
