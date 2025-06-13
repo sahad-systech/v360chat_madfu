@@ -322,6 +322,7 @@ class ChatScreenState extends State<ChatScreen> {
                         log("error: ${response.error}");
                         log("status: ${response.status}");
                         log("message: ${response.message}");
+                        log('outOfOffice: ${response.isOutOfOfficeTime}');
                         if (response.status) {
                           setState(() {
                             final List<String> filePath = [];

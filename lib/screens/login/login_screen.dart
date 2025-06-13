@@ -203,15 +203,16 @@ class _ChatRegisterPageState extends State<ChatRegisterPage> {
                           final response =
                               await ChatService(baseUrl: baseUrl, appId: appId)
                                   .createChatSession(
-                            chatContent: _descController.text,
-                            customerName: _nameController.text,
-                            customerEmail: email,
-                            customerPhone: phone,
-                          );
+                                      chatContent: _descController.text,
+                                      customerName: _nameController.text,
+                                      customerEmail: email,
+                                      customerPhone: phone,
+                                      languageInstance: 'en');
 
                           log("success ${response.success}");
                           log("isInQueue ${response.isInQueue}");
-                          log("error ${response.error}");
+                          log("isOutOfOfficeTime ${response.isOutOfOfficeTime}");
+                          log("message ${response.message}");
 
                           if (response.success) {
                             AppLocalStore.setLoging(true);
