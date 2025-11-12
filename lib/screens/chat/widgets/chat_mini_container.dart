@@ -1,7 +1,10 @@
+import 'dart:developer';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:madfu_demo/core/app_info.dart';
+import 'package:madfu_demo/screens/chat/widgets/bot_button_card.dart';
+import 'package:madfu_demo/screens/chat/widgets/bot_list_card.dart';
 
 class ChatMiniContainer extends StatelessWidget {
   const ChatMiniContainer({
@@ -10,18 +13,100 @@ class ChatMiniContainer extends StatelessWidget {
     required this.isSender,
     required this.documentList,
     required this.message,
+    required this.isBot,
+    this.botPayload,
+    this.onButtonTap,
+    required this.time,
   });
 
   final bool isSender;
   final String message;
   final List<String>? documentList;
   final bool isLocalFile;
+  final bool isBot;
+  final Map<String, dynamic>? botPayload;
+  final ValueChanged<BotReplyButton>? onButtonTap;
+  final String time;
 
   @override
   Widget build(BuildContext context) {
     // Get screen width and height for responsive design
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
+
+    // If this is a bot message with a structured payload, render a bot card
+    if (isBot && botPayload != null) {
+      final String content = message;
+      final String actionsType =
+          (botPayload!['bot_actions']?['type'] ?? '').toString();
+      // Extract header image link if provided
+      final String? headerImage = (botPayload!['bot_actions']?['header']
+              ?['image']?['link'])
+          ?.toString();
+   
+      log('Bot type: $actionsType');
+
+      if (actionsType == 'button') {
+           // Extract button id/title from payload
+      List<BotReplyButton> buttons = [];
+      final dynamic rawButtons =
+          botPayload!['bot_actions']?['action']?['buttons'];
+      if (rawButtons is List) {
+        for (final dynamic b in rawButtons) {
+          if (b is Map) {
+            final String id = (b['reply']?['id'] ?? b['id'] ?? '').toString();
+            final String title =
+                (b['reply']?['title'] ?? b['title'] ?? '').toString();
+            if (id.isNotEmpty && title.isNotEmpty) {
+              buttons.add(BotReplyButton(id: id, title: title));
+            }
+          }
+        }
+      }
+        return BotButtonCard(
+          headerImage: headerImage,
+          title: null,
+          subtitle: content.isEmpty ? null : content,
+          time: time,
+          buttons: buttons.isEmpty ? null : buttons,
+          onButtonTap: onButtonTap,
+        );
+      } else if (actionsType == 'image') {
+        final String? imageUrl =
+            botPayload!['bot_actions']?['image']?['link'];
+        if (imageUrl != null) {
+          return Image.network(imageUrl);
+        }
+      } else if (actionsType == 'list') {
+  // Extract bot list buttons
+  List<BotReplyButton> buttons = [];
+  final dynamic sections = botPayload!['bot_actions']?['action']?['sections'];
+
+  if (sections is List) {
+    for (final section in sections) {
+      if (section is Map && section['rows'] is List) {
+        for (final row in section['rows']) {
+          if (row is Map) {
+            final String id = (row['id'] ?? '').toString();
+            final String title = (row['title'] ?? '').toString();
+            if (id.isNotEmpty && title.isNotEmpty) {
+              buttons.add(BotReplyButton(id: id, title: title));
+            }
+          }
+        }
+      }
+    }
+  }
+
+  return BotListCard(
+    text: content.isEmpty ? null : content,
+    time: time,
+    botButtons: buttons,
+    onButtonTap: onButtonTap,
+  );
+}
+
+    }
 
     return Column(
       crossAxisAlignment:
@@ -40,7 +125,7 @@ class ChatMiniContainer extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: isSender
                       ? const Color.fromARGB(255, 33, 37, 243)
-                      : const Color.fromARGB(150, 229, 229, 229),
+                      : const Color.fromARGB(255, 215, 243, 247),
                   borderRadius: BorderRadius.only(
                     topLeft: const Radius.circular(16),
                     topRight: const Radius.circular(16),
@@ -54,7 +139,6 @@ class ChatMiniContainer extends StatelessWidget {
                       : CrossAxisAlignment.start,
                   children: [
                     // Display the message content
-
                     // Check file extension and display appropriate UI
                     if (documentList != null && documentList!.isNotEmpty)
                       ListView.builder(
@@ -63,10 +147,13 @@ class ChatMiniContainer extends StatelessWidget {
                         shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),
                         itemBuilder: (context, index) {
+                          // Example data (simplified from your JSON)
+
                           final document = documentList![index];
                           final fileExtension = document
                               .split('.')
-                              .last; // Assuming each document has an 'extension' key
+                              .last
+                              .toLowerCase(); // Assuming each document has an 'extension' key
                           switch (fileExtension) {
                             case 'aac':
                             case 'm4a':
@@ -84,7 +171,33 @@ class ChatMiniContainer extends StatelessWidget {
                                   : Padding(
                                       padding: const EdgeInsets.all(8.0),
                                       child: Image.network(
-                                          "$mediaUrl${documentList![index]}"),
+                                        "$mediaUrl${documentList![index]}",
+                                        fit: BoxFit.cover,
+                                        loadingBuilder:
+                                            (context, child, loadingProgress) {
+                                          if (loadingProgress == null) {
+                                            return child; // ✅ Show image once loaded
+                                          }
+
+                                          // ✅ Show loader while loading
+                                          return const Center(
+                                            child: Padding(
+                                              padding: EdgeInsets.symmetric(
+                                                  vertical: 40),
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 1.5,
+                                                color: Colors.blueAccent,
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                        errorBuilder:
+                                            (context, error, stackTrace) =>
+                                                const Center(
+                                          child: Icon(Icons.broken_image,
+                                              color: Colors.grey, size: 50),
+                                        ),
+                                      ),
                                     );
                             case 'pdf':
                               return Stack(

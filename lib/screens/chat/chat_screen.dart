@@ -6,12 +6,14 @@ import 'package:file_picker/file_picker.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:madfu_demo/core/app_info.dart';
 import 'package:madfu_demo/core/local_storage.dart';
+import 'package:madfu_demo/package/api_service.dart';
+import 'package:madfu_demo/package/local_storage.dart';
+import 'package:madfu_demo/package/socket_manager.dart';
 import 'package:madfu_demo/provider/chat_provider.dart';
+import 'package:madfu_demo/screens/chat/widgets/chat_mini_container.dart';
 import 'package:provider/provider.dart';
-import 'package:view360_chat/view360_chat.dart';
 
 import '../login/login_screen.dart';
-import 'widgets/chat_mini_container.dart';
 import 'widgets/doc_piker.dart';
 
 class ChatScreenController {
@@ -42,17 +44,93 @@ class ChatScreenState extends State<ChatScreen> {
   );
   final socketManager = SocketManager();
 
+  List<String> _selectedFilePaths() {
+    final List<String> filepaths = [];
+    if (selectedFiles.isNotEmpty) {
+      for (var item in selectedFiles) {
+        if (item.path != null) filepaths.add(item.path!);
+      }
+    }
+    return filepaths;
+  }
+
+  @override
+  void dispose() {
+    _messageController.dispose();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _setSelectedFiles(List<PlatformFile> files) {
+    setState(() {
+      selectedFiles
+        ..clear()
+        ..addAll(files);
+    });
+  }
+
+  Future<void> _handleGalleryTap() async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.image,
+      allowMultiple: true,
+    );
+    if (!mounted) return;
+    if (result != null && result.files.isNotEmpty) {
+      for (var file in result.files) {
+        log("Picked gallery file: ${file.name}");
+      }
+      _setSelectedFiles(result.files);
+    }
+  }
+
+  Future<void> _handleDocumentTap() async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.any,
+      allowMultiple: true,
+    );
+    if (!mounted) return;
+    if (result != null && result.files.isNotEmpty) {
+      for (var file in result.files) {
+        log("Picked document: ${file.name}");
+      }
+      _setSelectedFiles(result.files);
+    }
+  }
+
+  Future<void> _handleAudioTap() async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.any,
+      allowMultiple: true,
+    );
+    if (!mounted) return;
+    if (result != null && result.files.isNotEmpty) {
+      for (var file in result.files) {
+        log("Picked audio file: ${file.name}");
+      }
+      _setSelectedFiles(result.files);
+    }
+  }
+
+  Future<void> _handleCameraTap() async {
+    final pickedFile = await _imagePicker.pickImage(source: ImageSource.camera);
+    if (!mounted) return;
+    if (pickedFile != null) {
+      final platformFile = await convertXFileToPlatformFile(pickedFile);
+      if (!mounted) return;
+      _setSelectedFiles([platformFile]);
+    }
+  }
+
   @override
   void initState() {
     super.initState();
     AppLocalStore.getLogin().then((value) {
       if (value) {
         ChatScreenController.chatKey = GlobalKey<ChatScreenState>();
+
         socketManager.connect(
           baseUrl: baseUrl,
-          onConnected: () {
-            log('connected to socket server successfully');
-          },
+          onConnected: () => log('Connected to socket server successfully'),
           onMessage: ({
             required content,
             required createdAt,
@@ -60,25 +138,51 @@ class ChatScreenState extends State<ChatScreen> {
             required response,
             required senderType,
           }) {
+            log(response.toString());
+            // Determine message content based on response type
+            final messageType = response["type"];
+            final updateContent = switch (messageType) {
+              'end-message' => 'Message ended by agent',
+              'assigned-agent' => 'Agent assigned',
+              _ => content,
+            };
+
+            // Update message list
             Provider.of<MessageList>(context, listen: false).addMessage(
-                message: content,
-                files: filePaths ?? [],
-                senderType: senderType);
-            log('response: $response');
+              time: createdAt,
+              isLocal: false,
+              message: updateContent,
+              files: filePaths ?? [],
+              senderType: senderType,
+            );
           },
         );
       }
+
+      View360ChatPrefs.isBotChat().then((value) {
+        log('is Bot List = $value');
+      });
     });
 
-    ChatService(baseUrl: baseUrl, appId: appId).fetchMessages().then((value) {
+    chatService.fetchMessages().then((value) {
       log('messages length: ${value.messages.length}');
       log('success: ${value.success}');
       log('error: ${value.error}');
       for (var element in value.messages) {
-        Provider.of<MessageList>(context, listen: false).addMessage(
-            message: element.content,
-            files: element.files,
-            senderType: element.senderType);
+        if (element.botresponse != null) {
+          Provider.of<MessageList>(context, listen: false).addBotMessage(
+              element.botresponse!,
+              element.content,
+              _formatNowTime(isLocal: false, createdAt: element.createdAt));
+        } else {
+          Provider.of<MessageList>(context, listen: false).addMessage(
+              time:
+                  _formatNowTime(isLocal: false, createdAt: element.createdAt),
+              isLocal: false,
+              message: element.content,
+              files: element.files,
+              senderType: element.senderType);
+        }
       }
     });
   }
@@ -112,62 +216,19 @@ class ChatScreenState extends State<ChatScreen> {
       builder: (context) => ChatBottomSheet(
         onGalleryTap: () async {
           Navigator.pop(context);
-          final result = await FilePicker.platform.pickFiles(
-            type: FileType.image,
-            allowMultiple: true,
-          );
-          if (result != null && result.files.isNotEmpty) {
-            selectedFiles.clear();
-            setState(() {
-              selectedFiles = result.files;
-            });
-            for (var file in selectedFiles) {
-              log("Picked gallery file: ${file.name}");
-            }
-          }
+          await _handleGalleryTap();
         },
         onCameraTap: () async {
           Navigator.pop(context);
-          final pickedFile =
-              await _imagePicker.pickImage(source: ImageSource.camera);
-          if (pickedFile != null) {
-            selectedFiles.clear();
-            setState(() async {
-              selectedFiles.add(await convertXFileToPlatformFile(pickedFile));
-            });
-          }
+          await _handleCameraTap();
         },
         onDocumentTap: () async {
           Navigator.pop(context);
-          final result = await FilePicker.platform.pickFiles(
-            type: FileType.any,
-            allowMultiple: true,
-          );
-          if (result != null && result.files.isNotEmpty) {
-            selectedFiles.clear();
-            setState(() {
-              selectedFiles = result.files;
-            });
-            for (var file in selectedFiles) {
-              log("Picked document: ${file.name}");
-            }
-          }
+          await _handleDocumentTap();
         },
         onAudioTap: () async {
           Navigator.pop(context);
-          final result = await FilePicker.platform.pickFiles(
-            type: FileType.any,
-            allowMultiple: true,
-          );
-          if (result != null && result.files.isNotEmpty) {
-            selectedFiles.clear();
-            setState(() {
-              selectedFiles = result.files;
-            });
-            for (var file in selectedFiles) {
-              log("Picked audio file: ${file.name}");
-            }
-          }
+          await _handleAudioTap();
         },
       ),
     );
@@ -242,25 +303,94 @@ class ChatScreenState extends State<ChatScreen> {
           Expanded(
             child: Consumer<MessageList>(
               builder: (context, value, child) {
-                return ListView.builder(
-                  controller: _scrollController,
-                  padding: const EdgeInsets.all(12),
-                  itemCount: value.messages.length,
-                  itemBuilder: (context, index) {
-                    final msg = value.messages[index];
-                    return ChatMiniContainer(
-                      isLocalFile: msg['filePath'] != null,
-                      isSender: msg['isMe'],
-                      documentList: msg['filePath'] ?? msg['files'],
-                      message: msg['text'],
-                    );
-                  },
+                return Container(
+                  color: Colors.white,
+                  child: ListView.builder(
+                    controller: _scrollController,
+                    padding: const EdgeInsets.all(12),
+                    itemCount: value.messages.length,
+                    itemBuilder: (context, index) {
+                      final msg = value.messages[index];
+      
+                      // ✅ Skip rendering if message text is null or empty
+                      final messageText = msg['text'];
+                      if (messageText == null ||
+                          (messageText as String).trim().isEmpty) {
+                        return const SizedBox.shrink();
+                      }
+      
+                      return ChatMiniContainer(
+                        time: msg['time'],
+                        onButtonTap: (btn) async {
+                          if (_isSending) return;
+      
+                          _messageController.text = btn.title;
+                          final btnId = btn.id.trim();
+                          if (btnId.isEmpty) return;
+      
+                          setState(() => _isSending = true);
+      
+                          final response = await chatService.sendChatMessage(
+                            filePath: _selectedFilePaths(),
+                            chatContent: btnId,
+                          );
+      
+                          log("error: ${response.error}");
+                          log("status: ${response.status}");
+                          log("message: ${response.message}");
+                          log('outOfOffice: ${response.isOutOfOfficeTime}');
+      
+                          if (response.status) {
+                            if (!mounted) return;
+                            Provider.of<MessageList>(context, listen: false)
+                                .addMessage(
+                              time: _formatNowTime(isLocal: true),
+                              isLocal: true,
+                              message: _messageController.text.trim(),
+                              files: _selectedFilePaths(),
+                              senderType: 'customer',
+                            );
+      
+                            _messageController.clear();
+                            selectedFiles.clear();
+      
+                            WidgetsBinding.instance.addPostFrameCallback((_) {
+                              _scrollToBottom();
+                            });
+                          }
+      
+                          // ✅ Handle bot response from API
+                          final messageList =
+                              Provider.of<MessageList>(context, listen: false);
+                          final Map<String, dynamic>? apiResponse =
+                              response.botResponse;
+      
+                          if (apiResponse != null) {
+                            messageList.addBotMessage(
+                              apiResponse,
+                              null,
+                              _formatNowTime(isLocal: true),
+                            );
+                          }
+      
+                          if (!mounted) return;
+                          setState(() => _isSending = false);
+                        },
+                        isBot: msg['type'] == 'bot',
+                        botPayload: msg['payload'],
+                        isLocalFile: msg['isLocal'],
+                        isSender: !msg['isMe'],
+                        documentList: msg['filePath'] ?? msg['files'],
+                        message: messageText,
+                      );
+                    },
+                  ),
                 );
               },
             ),
           ),
-          const Divider(height: 1),
-          Padding(
+          Container(
+            color: Colors.white,
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
             child: Row(
               children: [
@@ -295,66 +425,83 @@ class ChatScreenState extends State<ChatScreen> {
                 ),
                 CircleAvatar(
                   backgroundColor: const Color.fromARGB(255, 33, 40, 243),
-                  child: IconButton(
-                    icon: const Icon(
-                      Icons.arrow_forward_ios_rounded,
-                      color: Colors.white,
-                      size: 12,
-                    ),
-                    onPressed: () async {
-                      if (_isSending) return;
-
-                      if (_messageController.text.isNotEmpty &&
-                          _messageController.text.trim() != '') {
-                        setState(() => _isSending = true);
-                        final List<String> filepaths = [];
-                        if (selectedFiles.isNotEmpty) {
-                          for (var item in selectedFiles) {
-                            filepaths.add(item.path!);
-                          }
-                        }
-                        final response =
-                            await ChatService(appId: appId, baseUrl: baseUrl)
-                                .sendChatMessage(
-                          filePath: filepaths,
-                          chatContent: _messageController.text.trim(),
-                        );
-                        log("error: ${response.error}");
-                        log("status: ${response.status}");
-                        log("message: ${response.message}");
-                        log('outOfOffice: ${response.isOutOfOfficeTime}');
-                        if (response.status) {
-                          setState(() {
-                            final List<String> filePath = [];
-                            for (var item in selectedFiles) {
-                              filePath.add(item.path!);
+                  child: _isSending
+                      ? Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: CircularProgressIndicator(
+                            backgroundColor: Colors.white,
+                            strokeWidth: .7,
+                          ),
+                        )
+                      : IconButton(
+                          icon: const Icon(
+                            Icons.arrow_forward_ios_rounded,
+                            color: Colors.white,
+                            size: 12,
+                          ),
+                          onPressed: () async {
+                            if (_isSending) return;
+                            final trimmed = _messageController.text.trim();
+                            if (trimmed.isEmpty) return;
+                            setState(() => _isSending = true);
+                            final response = await chatService.sendChatMessage(
+                              filePath: _selectedFilePaths(),
+                              chatContent: trimmed,
+                            );
+                            log("error: ${response.error}");
+                            log("status: ${response.status}");
+                            log("message: ${response.message}");
+                            log('outOfOffice: ${response.isOutOfOfficeTime}');
+      
+                            if (response.status) {
+                              if (!mounted) return;
+                              setState(() {
+                                Provider.of<MessageList>(context, listen: false)
+                                    .addMessage(
+                                        time: _formatNowTime(isLocal: true),
+                                        isLocal: true,
+                                        message: trimmed,
+                                        files: _selectedFilePaths(),
+                                        senderType: 'customer');
+                                _messageController.clear();
+                                selectedFiles.clear();
+                              });
+      
+                              WidgetsBinding.instance.addPostFrameCallback((_) {
+                                _scrollToBottom();
+                              });
                             }
-
-                            Provider.of<MessageList>(context, listen: false)
-                                .addMessage(
-                                    message: _messageController.text.trim(),
-                                    files: filePath,
-                                    senderType: 'customer');
-                            _messageController.clear();
-                            selectedFiles.clear();
-                          });
-
-                          WidgetsBinding.instance.addPostFrameCallback((_) {
-                            _scrollToBottom();
-                          });
-                        }
-
-                        setState(() => _isSending = false);
-                      }
-                    },
-                  ),
+                            final messageList = Provider.of<MessageList>(
+                                context,
+                                listen: false);
+                            // Suppose this is your API response
+                            final Map<String, dynamic>? apiResponse =
+                                response.botResponse;
+                            // Add it as a bot message
+                            if (apiResponse != null) {
+                              messageList.addBotMessage(apiResponse, null,
+                                  _formatNowTime(isLocal: true));
+                            }
+                            ///////////////////////////
+      
+                            if (!mounted) return;
+                            setState(() => _isSending = false);
+                          },
+                        ),
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 25),
         ],
       ),
     );
   }
+}
+
+String _formatNowTime({required bool isLocal, String? createdAt}) {
+  final now = isLocal ? DateTime.now() : DateTime.parse(createdAt!);
+  final int hour = now.hour % 12 == 0 ? 12 : now.hour % 12;
+  final String minute = now.minute.toString().padLeft(2, '0');
+  final String period = now.hour >= 12 ? 'PM' : 'AM';
+  return '$hour:$minute $period';
 }

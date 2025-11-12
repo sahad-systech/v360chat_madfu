@@ -3,8 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:intl_phone_field/intl_phone_field.dart';
 import 'package:madfu_demo/core/app_info.dart';
 import 'package:madfu_demo/core/local_storage.dart';
+import 'package:madfu_demo/package/api_service.dart';
+import 'package:madfu_demo/package/socket_manager.dart';
 import 'package:provider/provider.dart';
-import 'package:view360_chat/view360_chat.dart';
+// import 'package:view360_chat/view360_chat.dart';
 
 import '../../main.dart';
 import '../../provider/chat_provider.dart';
@@ -26,14 +28,19 @@ class _ChatRegisterPageState extends State<ChatRegisterPage> {
   String? _phoneNumberValidation;
 
   final socketManager = SocketManager();
+  final _emailRegex = RegExp(r"^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$");
+  bool _isSubmitting = false;
+  final ChatService _chatService = ChatService(baseUrl: baseUrl, appId: appId);
 
   @override
   void initState() {
+    log('inistate ChatRegisterPage');
     socketManager.connect(
       baseUrl: baseUrl,
       onConnected: () {
         log('connected to socket server successfully');
       },
+      
       onMessage: ({
         required content,
         required createdAt,
@@ -42,12 +49,24 @@ class _ChatRegisterPageState extends State<ChatRegisterPage> {
         required senderType,
       }) {
         Provider.of<MessageList>(context, listen: false).addMessage(
+          time: createdAt,
+          isLocal: false,
             message: content, files: filePaths ?? [], senderType: senderType);
-        log('response: $response');
+        log('response from login page: $response'); 
       },
     );
     super.initState();
   }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _emailController.dispose();
+    _descController.dispose();
+    super.dispose();
+  }
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -140,10 +159,8 @@ class _ChatRegisterPageState extends State<ChatRegisterPage> {
                       controller: _emailController,
                       media: media,
                       validator: (value) {
-                        if (value!.isNotEmpty) {
-                          final emailRegex =
-                              RegExp(r"^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$");
-                          if (!emailRegex.hasMatch(value)) {
+                        if ((value ?? '').isNotEmpty) {
+                          if (!_emailRegex.hasMatch(value!.trim())) {
                             return 'Enter a valid email';
                           }
                         }
@@ -173,19 +190,19 @@ class _ChatRegisterPageState extends State<ChatRegisterPage> {
                           ),
                         ),
                         onPressed: () async {
-                          final isValid =
-                              _formKey.currentState?.validate() ?? false;
+                          if (_isSubmitting) return;
+                          final isValid = _formKey.currentState?.validate() ?? false;
 
-                          final phone = _phoneNumber?.trim() ?? '';
-                          final phonevalid =
-                              _phoneNumberValidation?.trim() ?? '';
+                          final phone = (_phoneNumber ?? '').trim();
+                          final phonevalid = (_phoneNumberValidation ?? '').trim();
                           final email = _emailController.text.trim();
+                          final description = _descController.text.trim();
+                          final name = _nameController.text.trim();
 
                           if (!isValid) return;
 
-                          // Custom logic: exactly one of phone or email is required
-
                           if (phonevalid.isEmpty && email.isEmpty) {
+                            if (!mounted) return;
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
                                 content: Text(
@@ -195,45 +212,43 @@ class _ChatRegisterPageState extends State<ChatRegisterPage> {
                             );
                             return;
                           }
-                          // log("email $email");
-                          // log("phone $phone");
-                          // log("name ${_nameController.text}");
-                          // log("desc ${_descController.text}");
 
-                          final response =
-                              await ChatService(baseUrl: baseUrl, appId: appId)
-                                  .createChatSession(
-                                      chatContent: _descController.text,
-                                      customerName: _nameController.text,
-                                      customerEmail: email,
-                                      customerPhone: phone,
-                                      languageInstance: 'en');
+                          setState(() => _isSubmitting = true);
+                          final response = await _chatService.createChatSession(
+                            chatContent: description,
+                            customerName: name,
+                            customerEmail: email,
+                            customerPhone: phone,
+                            languageInstance: 'en',
+                          );
 
                           log("success ${response.success}");
                           log("isInQueue ${response.isInQueue}");
                           log("isOutOfOfficeTime ${response.isOutOfOfficeTime}");
                           log("message ${response.message}");
+                          log("botResponse ${response.botResponse}");
 
                           if (response.success) {
-                            AppLocalStore.setLoging(true);
-                            // ignore: use_build_context_synchronously
+                            await AppLocalStore.setLoging(true);
+                            if (!mounted) return;
                             Navigator.of(context).pushAndRemoveUntil(
-                                MaterialPageRoute(
-                                    builder: (_) => ChatScreen(
-                                          key: chatScreenKey,
-                                        )),
-                                (_) => false);
-                          } else {
-                            // ignore: use_build_context_synchronously
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  'Fail to Login',
+                              MaterialPageRoute(
+                                builder: (_) => ChatScreen(
+                                  key: chatScreenKey,
                                 ),
                               ),
+                              (_) => false,
                             );
-                            return;
+                          } else {
+                            if (!mounted) return;
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Fail to Login'),
+                              ),
+                            );
                           }
+                          if (!mounted) return;
+                          setState(() => _isSubmitting = false);
                         },
                         child: Text(
                           'Send',
