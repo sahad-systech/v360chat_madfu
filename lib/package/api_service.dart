@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:developer';
+
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -172,7 +173,6 @@ class ChatService {
 
       if (response.statusCode == 200 || response.statusCode == 304) {
         final json = jsonDecode(responseString);
-        log(json.toString());
          final bool isQuieue = json['is_queue'] ?? false;
          final customerId = json['customerId']?.toString();
         await View360ChatPrefs.saveIsBotValue(json['content']['message'] == 'Bot Response');

@@ -1,4 +1,5 @@
-import 'dart:developer';
+
+
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -33,7 +34,6 @@ class ChatMiniContainer extends StatelessWidget {
     // Get screen width and height for responsive design
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
-
     // If this is a bot message with a structured payload, render a bot card
     if (isBot && botPayload != null) {
       final String content = message;
@@ -43,26 +43,24 @@ class ChatMiniContainer extends StatelessWidget {
       final String? headerImage = (botPayload!['bot_actions']?['header']
               ?['image']?['link'])
           ?.toString();
-   
-      log('Bot type: $actionsType');
 
       if (actionsType == 'button') {
-           // Extract button id/title from payload
-      List<BotReplyButton> buttons = [];
-      final dynamic rawButtons =
-          botPayload!['bot_actions']?['action']?['buttons'];
-      if (rawButtons is List) {
-        for (final dynamic b in rawButtons) {
-          if (b is Map) {
-            final String id = (b['reply']?['id'] ?? b['id'] ?? '').toString();
-            final String title =
-                (b['reply']?['title'] ?? b['title'] ?? '').toString();
-            if (id.isNotEmpty && title.isNotEmpty) {
-              buttons.add(BotReplyButton(id: id, title: title));
+        // Extract button id/title from payload
+        List<BotReplyButton> buttons = [];
+        final dynamic rawButtons =
+            botPayload!['bot_actions']?['action']?['buttons'];
+        if (rawButtons is List) {
+          for (final dynamic b in rawButtons) {
+            if (b is Map) {
+              final String id = (b['reply']?['id'] ?? b['id'] ?? '').toString();
+              final String title =
+                  (b['reply']?['title'] ?? b['title'] ?? '').toString();
+              if (id.isNotEmpty && title.isNotEmpty) {
+                buttons.add(BotReplyButton(id: id, title: title));
+              }
             }
           }
         }
-      }
         return BotButtonCard(
           headerImage: headerImage,
           title: null,
@@ -72,40 +70,39 @@ class ChatMiniContainer extends StatelessWidget {
           onButtonTap: onButtonTap,
         );
       } else if (actionsType == 'image') {
-        final String? imageUrl =
-            botPayload!['bot_actions']?['image']?['link'];
+        final String? imageUrl = botPayload!['bot_actions']?['image']?['link'];
         if (imageUrl != null) {
           return Image.network(imageUrl);
         }
       } else if (actionsType == 'list') {
-  // Extract bot list buttons
-  List<BotReplyButton> buttons = [];
-  final dynamic sections = botPayload!['bot_actions']?['action']?['sections'];
+        // Extract bot list buttons
+        List<BotReplyButton> buttons = [];
+        final dynamic sections =
+            botPayload!['bot_actions']?['action']?['sections'];
 
-  if (sections is List) {
-    for (final section in sections) {
-      if (section is Map && section['rows'] is List) {
-        for (final row in section['rows']) {
-          if (row is Map) {
-            final String id = (row['id'] ?? '').toString();
-            final String title = (row['title'] ?? '').toString();
-            if (id.isNotEmpty && title.isNotEmpty) {
-              buttons.add(BotReplyButton(id: id, title: title));
+        if (sections is List) {
+          for (final section in sections) {
+            if (section is Map && section['rows'] is List) {
+              for (final row in section['rows']) {
+                if (row is Map) {
+                  final String id = (row['id'] ?? '').toString();
+                  final String title = (row['title'] ?? '').toString();
+                  if (id.isNotEmpty && title.isNotEmpty) {
+                    buttons.add(BotReplyButton(id: id, title: title));
+                  }
+                }
+              }
             }
           }
         }
+
+        return BotListCard(
+          text: content.isEmpty ? null : content,
+          time: time,
+          botButtons: buttons,
+          onButtonTap: onButtonTap,
+        );
       }
-    }
-  }
-
-  return BotListCard(
-    text: content.isEmpty ? null : content,
-    time: time,
-    botButtons: buttons,
-    onButtonTap: onButtonTap,
-  );
-}
-
     }
 
     return Column(
@@ -147,58 +144,59 @@ class ChatMiniContainer extends StatelessWidget {
                         shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),
                         itemBuilder: (context, index) {
-                          // Example data (simplified from your JSON)
-
                           final document = documentList![index];
                           final fileExtension = document
                               .split('.')
                               .last
                               .toLowerCase(); // Assuming each document has an 'extension' key
                           switch (fileExtension) {
-                            case 'aac':
-                            case 'm4a':
-                            case 'wav':
-                              return SizedBox.shrink();
                             case 'jpg':
                             case 'jpeg':
                             case 'png':
-                              return isLocalFile
-                                  ? Padding(
-                                      padding: const EdgeInsets.all(8.0),
-                                      child: Image.file(
-                                          File(documentList![index])),
-                                    )
-                                  : Padding(
-                                      padding: const EdgeInsets.all(8.0),
-                                      child: Image.network(
-                                        "$mediaUrl${documentList![index]}",
-                                        fit: BoxFit.cover,
-                                        loadingBuilder:
-                                            (context, child, loadingProgress) {
-                                          if (loadingProgress == null) {
-                                            return child; // ✅ Show image once loaded
-                                          }
-
-                                          // ✅ Show loader while loading
-                                          return const Center(
-                                            child: Padding(
-                                              padding: EdgeInsets.symmetric(
-                                                  vertical: 40),
-                                              child: CircularProgressIndicator(
-                                                strokeWidth: 1.5,
-                                                color: Colors.blueAccent,
-                                              ),
-                                            ),
-                                          );
-                                        },
-                                        errorBuilder:
-                                            (context, error, stackTrace) =>
-                                                const Center(
-                                          child: Icon(Icons.broken_image,
-                                              color: Colors.grey, size: 50),
+                              if (isLocalFile) {
+                                return Padding(
+                                  padding: const EdgeInsets.all(8.0),
+                                  child: Image.file(
+                                    File(documentList![index]),
+                                    fit: BoxFit.cover,
+                                  ),
+                                );
+                              } else {
+                                // For agent-sent documents, construct the proper URL
+                                final imageUrl = documentList![index].startsWith('http')
+                                    ? documentList![index]
+                                    : '$mediaUrl${documentList![index]}';
+                                return Padding(
+                                  padding: const EdgeInsets.all(8.0),
+                                  child: Image.network(
+                                    imageUrl,
+                                    fit: BoxFit.cover,
+                                    loadingBuilder:
+                                        (context, child, loadingProgress) {
+                                      if (loadingProgress == null) {
+                                        return child; // ✅ Show image once loaded
+                                      }
+                                      // ✅ Show loader while loading
+                                      return const Center(
+                                        child: Padding(
+                                          padding: EdgeInsets.symmetric(
+                                              vertical: 40),
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 1.5,
+                                            color: Colors.blueAccent,
+                                          ),
                                         ),
-                                      ),
-                                    );
+                                      );
+                                    },
+                                    errorBuilder:
+                                        (context, error, stackTrace) =>
+                                            const Center(
+                                      child: Icon(Icons.broken_image,
+                                          color: Colors.grey, size: 50),
+                                    ),
+                                  ),
+                                );
+                              }
                             case 'pdf':
                               return Stack(
                                 children: [
@@ -341,7 +339,39 @@ class ChatMiniContainer extends StatelessWidget {
                               );
 
                             default:
-                              return SizedBox.shrink();
+                              // Show generic file icon for unknown extensions
+                              final filename = documentList![index].split('/').last;
+                              return Material(
+                                color: Colors.transparent,
+                                child: InkWell(
+                                  onTap: () {},
+                                  child: Container(
+                                    margin: EdgeInsets.all(5),
+                                    padding: EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(8),
+                                      color: const Color(0xFF555555),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        const Icon(Icons.file_present,
+                                            color: Colors.white),
+                                        SizedBox(width: 10),
+                                        Expanded(
+                                          child: Text(
+                                            filename.isNotEmpty ? filename : 'File',
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 12),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              );
                           }
                         },
                       ),

@@ -1,4 +1,4 @@
-import 'dart:developer';
+
 import 'package:flutter/material.dart';
 import 'package:intl_phone_field/intl_phone_field.dart';
 import 'package:madfu_demo/core/app_info.dart';
@@ -34,12 +34,9 @@ class _ChatRegisterPageState extends State<ChatRegisterPage> {
 
   @override
   void initState() {
-    log('inistate ChatRegisterPage');
     socketManager.connect(
       baseUrl: baseUrl,
-      onConnected: () {
-        log('connected to socket server successfully');
-      },
+      onConnected: () {},
       
       onMessage: ({
         required content,
@@ -51,8 +48,7 @@ class _ChatRegisterPageState extends State<ChatRegisterPage> {
         Provider.of<MessageList>(context, listen: false).addMessage(
           time: createdAt,
           isLocal: false,
-            message: content, files: filePaths ?? [], senderType: senderType);
-        log('response from login page: $response'); 
+            message: content, files: filePaths ?? [], senderType: senderType); 
       },
     );
     super.initState();
@@ -222,11 +218,7 @@ class _ChatRegisterPageState extends State<ChatRegisterPage> {
                             languageInstance: 'en',
                           );
 
-                          log("success ${response.success}");
-                          log("isInQueue ${response.isInQueue}");
-                          log("isOutOfOfficeTime ${response.isOutOfOfficeTime}");
-                          log("message ${response.message}");
-                          log("botResponse ${response.botResponse}");
+
 
                           if (response.success) {
                             await AppLocalStore.setLoging(true);

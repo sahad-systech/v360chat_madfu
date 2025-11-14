@@ -1,4 +1,4 @@
-import 'dart:developer';
+
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -76,9 +76,6 @@ class ChatScreenState extends State<ChatScreen> {
     );
     if (!mounted) return;
     if (result != null && result.files.isNotEmpty) {
-      for (var file in result.files) {
-        log("Picked gallery file: ${file.name}");
-      }
       _setSelectedFiles(result.files);
     }
   }
@@ -90,9 +87,6 @@ class ChatScreenState extends State<ChatScreen> {
     );
     if (!mounted) return;
     if (result != null && result.files.isNotEmpty) {
-      for (var file in result.files) {
-        log("Picked document: ${file.name}");
-      }
       _setSelectedFiles(result.files);
     }
   }
@@ -104,9 +98,6 @@ class ChatScreenState extends State<ChatScreen> {
     );
     if (!mounted) return;
     if (result != null && result.files.isNotEmpty) {
-      for (var file in result.files) {
-        log("Picked audio file: ${file.name}");
-      }
       _setSelectedFiles(result.files);
     }
   }
@@ -130,15 +121,14 @@ class ChatScreenState extends State<ChatScreen> {
 
         socketManager.connect(
           baseUrl: baseUrl,
-          onConnected: () => log('Connected to socket server successfully'),
+          onConnected: () {},
           onMessage: ({
             required content,
             required createdAt,
             filePaths,
             required response,
             required senderType,
-          }) {
-            log(response.toString());
+            }) {
             // Determine message content based on response type
             final messageType = response["type"];
             final updateContent = switch (messageType) {
@@ -159,15 +149,10 @@ class ChatScreenState extends State<ChatScreen> {
         );
       }
 
-      View360ChatPrefs.isBotChat().then((value) {
-        log('is Bot List = $value');
-      });
+      View360ChatPrefs.isBotChat();
     });
 
     chatService.fetchMessages().then((value) {
-      log('messages length: ${value.messages.length}');
-      log('success: ${value.success}');
-      log('error: ${value.error}');
       for (var element in value.messages) {
         if (element.botresponse != null) {
           Provider.of<MessageList>(context, listen: false).addBotMessage(
@@ -312,10 +297,13 @@ class ChatScreenState extends State<ChatScreen> {
                     itemBuilder: (context, index) {
                       final msg = value.messages[index];
       
-                      // ✅ Skip rendering if message text is null or empty
+                      // ✅ Skip rendering if message text is empty AND no files attached
                       final messageText = msg['text'];
-                      if (messageText == null ||
-                          (messageText as String).trim().isEmpty) {
+                      final documentList = msg['filePath'] ?? msg['files'];
+                      final hasText = messageText != null && (messageText as String).trim().isNotEmpty;
+                      final hasFiles = documentList != null && (documentList as List).isNotEmpty;
+                      
+                      if (!hasText && !hasFiles) {
                         return const SizedBox.shrink();
                       }
       
@@ -335,10 +323,7 @@ class ChatScreenState extends State<ChatScreen> {
                             chatContent: btnId,
                           );
       
-                          log("error: ${response.error}");
-                          log("status: ${response.status}");
-                          log("message: ${response.message}");
-                          log('outOfOffice: ${response.isOutOfOfficeTime}');
+
       
                           if (response.status) {
                             if (!mounted) return;
@@ -381,7 +366,7 @@ class ChatScreenState extends State<ChatScreen> {
                         isLocalFile: msg['isLocal'],
                         isSender: !msg['isMe'],
                         documentList: msg['filePath'] ?? msg['files'],
-                        message: messageText,
+                        message: (messageText is String ? messageText : '').trim(),
                       );
                     },
                   ),
@@ -448,10 +433,6 @@ class ChatScreenState extends State<ChatScreen> {
                               filePath: _selectedFilePaths(),
                               chatContent: trimmed,
                             );
-                            log("error: ${response.error}");
-                            log("status: ${response.status}");
-                            log("message: ${response.message}");
-                            log('outOfOffice: ${response.isOutOfOfficeTime}');
       
                             if (response.status) {
                               if (!mounted) return;
