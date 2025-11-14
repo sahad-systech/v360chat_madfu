@@ -230,7 +230,20 @@ class _ChatRegisterPageState extends State<ChatRegisterPage> {
 
                           if (response.success) {
                             await AppLocalStore.setLoging(true);
+                            
+                            // Add queue message if user is in queue
+                            if (response.isInQueue) {
+                              Provider.of<MessageList>(context, listen: false).addMessage(
+                                time: DateTime.now().toString(),
+                                isLocal: false,
+                                message: 'message You are currently in the queue.A representative will assist you as soon as possible. We appreciate your patience.',
+                                files: [],
+                                senderType: 'user',
+                              );
+                            }
+                            
                             if (!mounted) return;
+                            
                             Navigator.of(context).pushAndRemoveUntil(
                               MaterialPageRoute(
                                 builder: (_) => ChatScreen(
