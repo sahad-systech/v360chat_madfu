@@ -318,9 +318,13 @@ class ChatScreenState extends State<ChatScreen> {
       
                           setState(() => _isSending = true);
       
+                          final contentToSend = _messageController.text.trim().isNotEmpty
+                              ? _messageController.text.trim()
+                              : btnId;
+
                           final response = await chatService.sendChatMessage(
                             filePath: _selectedFilePaths(),
-                            chatContent: btnId,
+                            chatContent: contentToSend,
                           );
       
 
@@ -427,11 +431,13 @@ class ChatScreenState extends State<ChatScreen> {
                           onPressed: () async {
                             if (_isSending) return;
                             final trimmed = _messageController.text.trim();
-                            if (trimmed.isEmpty) return;
+                            final files = _selectedFilePaths();
+                            // Allow sending when there is either text or files selected
+                            if (trimmed.isEmpty && files.isEmpty) return;
                             setState(() => _isSending = true);
                             final response = await chatService.sendChatMessage(
-                              filePath: _selectedFilePaths(),
-                              chatContent: trimmed,
+                              filePath: files,
+                              chatContent: trimmed.isNotEmpty ? trimmed : '',
                             );
       
                             if (response.status) {
