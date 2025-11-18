@@ -59,15 +59,15 @@ class SocketManager {
     _socket.onDisconnect((_) => log('Disconnected from chat socket'));
 
     _socket.off('message received');
-    _socket.on('message received', (data) {
+    _socket.on('message received', (data) async{
       log(data.toString());
       final String type = data["type"].toString();
       if (type == "assigned-agent") {
-        View360ChatPrefs.changeQueueStatus(false);
-        View360ChatPrefs.condentIdInQueue(data["chatId"].toString());
+       await View360ChatPrefs.changeQueueStatus(false);
+       await View360ChatPrefs.condentIdInQueue(data["chatId"].toString());
       }
       if (type == "end-message") {
-        View360ChatPrefs.removeCustomerId();
+       await View360ChatPrefs.removeCustomerId();
       }
 
       final content = data["content"].toString();

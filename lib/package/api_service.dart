@@ -170,13 +170,15 @@ class ChatService {
 
       final response = await request.send();
       final responseString = await response.stream.bytesToString();
-
+    
       if (response.statusCode == 200 || response.statusCode == 304) {
         final json = jsonDecode(responseString);
+        log(json.toString());
          final bool isQuieue = json['is_queue'] ?? false;
          final customerId = json['customerId']?.toString();
         await View360ChatPrefs.saveIsBotValue(json['content']['message'] == 'Bot Response');
         await View360ChatPrefs.changeQueueStatus(isQuieue);
+        await View360ChatPrefs.condentIdInQueue(json['chatId'].toString());
         await View360ChatPrefs.saveCustomerId(customerId ?? '000');
         return ChatSentResponse.fromJson(json);
       } else {
