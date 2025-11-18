@@ -1,4 +1,3 @@
-import 'dart:developer';
 import 'package:madfu_demo/package/local_storage.dart';
 import 'package:socket_io_client/socket_io_client.dart' as io;
 
@@ -48,7 +47,7 @@ class SocketManager {
     _socket.connect();
 
     _socket.onError((handler){
-      log(handler.toString());
+      // Handle socket error
     });
 
     _socket.onConnect((_) async {
@@ -56,17 +55,17 @@ class SocketManager {
       if (customerId != null) {
         socket.emit("joinRoom", "customer-$customerId");
       }
-      log('view360 socket connected.');
       if (onConnected != null) {
-        onConnected(); // ✅ Invoke the callback here
+        onConnected();
       }
     });
 
-    _socket.onDisconnect((_) => log('Disconnected from chat socket'));
+    _socket.onDisconnect((_) {
+      // Socket disconnected
+    });
 
     _socket.off('message received');
     _socket.on('message received', (data) async{
-      log(data.toString());
       final String type = data["type"].toString();
       if (type == "assigned-agent") {
        await View360ChatPrefs.changeQueueStatus(false);

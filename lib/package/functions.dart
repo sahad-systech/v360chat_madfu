@@ -1,7 +1,6 @@
 import 'dart:math';
 
 import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:flutter/material.dart';
 import 'package:madfu_demo/package/api_service.dart';
 
 /// Utility functions for the chat package
@@ -49,6 +48,6 @@ Future<void> getFCMToken(
     await ChatService(baseUrl: baseUrl, appId: appId)
         .notificationToken(token: token!, userId: userId);
   } catch (e) {
-    debugPrint('Error getting FCM token from package: $e');
+    // Error getting FCM token
   }
 }

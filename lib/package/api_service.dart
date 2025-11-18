@@ -1,10 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:developer';
 
 import 'dart:io';
 
-import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'package:madfu_demo/package/functions.dart';
@@ -111,7 +109,6 @@ class ChatService {
     } on FormatException {
       return ChatRegisterResponse.error('Invalid response format');
     } catch (e) {
-      debugPrint('Exception in createChatSession: $e');
       return ChatRegisterResponse.error(e.toString());
     }
   }
@@ -179,7 +176,6 @@ class ChatService {
     
       if (response.statusCode == 200 || response.statusCode == 304) {
         final json = jsonDecode(responseString);
-        log(json.toString());
          final bool isQuieue = json['is_queue'] ?? false;
          final customerId = json['customerId']?.toString();
         await View360ChatPrefs.saveIsBotValue(json['content']['message'] == 'Bot Response');
@@ -227,9 +223,6 @@ class ChatService {
     } else {
       url = Uri.parse('$baseUrl/widgetapi/messages/allMessages/$contentId');
     }
-    log('content id : $contentId');
-    log('fetch url : ${url.toString()}');
-    log('isBot : $isBot');
     }
  
     final headers = {'app-id': appId};
@@ -273,13 +266,12 @@ class ChatService {
       http.StreamedResponse response = await request.send();
 
       if (response.statusCode == 200) {
-        debugPrint("FCM token updated successfully");
+        // FCM token updated
       } else {
-        // final errorBody = await response.stream.bytesToString();
-        debugPrint('Failed to update FCM token');
+        // Failed to update FCM token
       }
     } catch (e) {
-      debugPrint('Failed to updating FCM token');
+      // Failed to update FCM token
     }
   }
 }
