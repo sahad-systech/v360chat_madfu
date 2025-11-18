@@ -37,7 +37,21 @@ Main service for all chat API operations.
 - `createChatSession()` - Initialize new chat sessions
 - `sendChatMessage()` - Send messages with optional file attachments
 - `fetchMessages()` - Retrieve chat message history
-- `notificationToken()` - Update FCM token for push notifications
+- `notificationToken()` - Update FCM token for push notifications with callbacks
+
+**Notification Token Usage:**
+```dart
+await chatService.notificationToken(
+  token: 'fcm_token_123',
+  userId: 'user_456',
+  onSuccess: () {
+    // FCM token updated successfully
+  },
+  onError: (error) {
+    // Handle FCM token update error
+  },
+);
+```
 
 **Supported File Types:**
 - Images: `.jpg`, `.jpeg`, `.png`, `.gif`
@@ -53,6 +67,8 @@ Singleton pattern for WebSocket connection management.
 - Queue status notifications
 - Agent assignment notifications
 - Connection lifecycle management
+- Automatic reconnection with exponential backoff
+- Error and disconnection callbacks
 
 **Usage:**
 ```dart
@@ -70,6 +86,12 @@ SocketManager().connect(
   }) {
     // Handle incoming message
   },
+  onError: (error) {
+    // Handle socket errors
+  },
+  onDisconnected: (reason) {
+    // Handle disconnection
+  },
 );
 ```
 
@@ -86,7 +108,19 @@ Static utility class for managing chat session data using SharedPreferences.
 ### 4. Utility Functions (functions.dart)
 - `getMimeType()` - Determine MIME type from file extension
 - `generateUniqueId()` - Generate unique message/session IDs
-- `getFCMToken()` - Retrieve and register FCM token
+- `getFCMToken()` - Retrieve and register FCM token with error handling
+
+**FCM Token Usage:**
+```dart
+await getFCMToken(
+  userId: 'user123',
+  baseUrl: 'your_base_url',
+  appId: 'your_app_id',
+  onError: (error) {
+    // Handle FCM token error
+  },
+);
+```
 
 ## Usage Example
 
@@ -123,6 +157,13 @@ SocketManager().connect(
   ) {
     // Handle new message
   },
+  onError: (error) {
+    print('Socket error: $error');
+  },
+  onDisconnected: (reason) {
+    print('Disconnected: $reason');
+    // Auto-reconnection is handled automatically
+  },
 );
 
 // Send message
@@ -149,8 +190,10 @@ final messageList = await chatService.fetchMessages();
 
 ### 3. **Error Handling**
 - All API methods return response objects with error states
+- Socket manager provides `onError` and `onDisconnected` callbacks
+- FCM operations support error callbacks
 - Check `success` property before using data
-- Handle timeout and network exceptions
+- Handle timeout and network exceptions properly
 
 ### 4. **Session Management**
 - Save session data using `View360ChatPrefs` methods
@@ -242,18 +285,20 @@ The SDK provides descriptive error messages:
 
 ## Production Checklist
 
-- ✅ Remove all debug logging
+- ✅ Remove all debug logging (no print statements in production code)
 - ✅ Validate API credentials
-- ✅ Test all error scenarios
+- ✅ Test all error scenarios with callbacks
 - ✅ Implement proper session timeout
 - ✅ Test on slow networks
-- ✅ Handle offline scenarios
-- ✅ Implement reconnection logic
+- ✅ Handle offline scenarios with auto-reconnection
+- ✅ Reconnection logic with exponential backoff (up to 5 attempts)
 - ✅ Test with large files
-- ✅ Verify FCM integration
+- ✅ Verify FCM integration with error handling
 - ✅ Test bot responses
 - ✅ Validate queue handling
 - ✅ Test with real backend
+- ✅ Handle socket disconnections gracefully
+- ✅ Implement error callbacks for all async operations
 
 ## Versioning
 

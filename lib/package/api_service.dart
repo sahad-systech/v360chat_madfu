@@ -90,7 +90,12 @@ class ChatService {
             customerEmailKeyValue: customerEmail ?? '',
             customerPhoneKeyValue: customerPhone ?? '');
         getFCMToken(
-            userId: customerId.toString(), baseUrl: baseUrl, appId: appId);
+            userId: customerId.toString(),
+            baseUrl: baseUrl,
+            appId: appId,
+            onError: (error) {
+              // Handle FCM token error
+            });
 
          
 
@@ -254,8 +259,12 @@ class ChatService {
 
   /// Updates the FCM (Firebase Cloud Messaging) token on the backend
   /// Used to enable push notifications for the customer
-  Future<void> notificationToken(
-      {required String token, required String userId}) async {
+  Future<void> notificationToken({
+    required String token,
+    required String userId,
+    void Function()? onSuccess,
+    OnFCMError? onError,
+  }) async {
     try {
       var headers = {'app-id': appId, 'Content-Type': 'application/json'};
       var request = http.Request(
@@ -266,12 +275,18 @@ class ChatService {
       http.StreamedResponse response = await request.send();
 
       if (response.statusCode == 200) {
-        // FCM token updated
+        onSuccess?.call();
       } else {
-        // Failed to update FCM token
+        onError?.call('Failed with status ${response.statusCode}');
       }
+    } on SocketException catch (e) {
+      onError?.call('No Internet connection: $e');
+    } on TimeoutException catch (e) {
+      onError?.call('Request timed out: $e');
+    } on HttpException catch (e) {
+      onError?.call('HTTP error: $e');
     } catch (e) {
-      // Failed to update FCM token
+      onError?.call(e);
     }
   }
 }
