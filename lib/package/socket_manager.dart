@@ -1,8 +1,8 @@
 import 'dart:developer';
 import 'package:madfu_demo/package/local_storage.dart';
 import 'package:socket_io_client/socket_io_client.dart' as io;
-// import 'package:view360_chat/src/local/local_storage.dart';
 
+/// Callback function type for handling received messages
 typedef OnMessageReceived = void Function(
     {required String content,
     List<String>? filePaths,
@@ -10,15 +10,21 @@ typedef OnMessageReceived = void Function(
     required String senderType,
     required String createdAt});
 
+/// It's a singleton that manages the socket connection lifecycle and message events
 class SocketManager { 
+  /// Singleton instance
   static final SocketManager _instance = SocketManager._internal();
+  /// The socket.io client instance
   late io.Socket _socket;
+  /// Callback for handling incoming messages
   OnMessageReceived? onMessageReceived;
 
   factory SocketManager() => _instance;
 
+  /// Private constructor to prevent instantiation
   SocketManager._internal();
 
+  /// Establishes WebSocket connection to the chat server
   void connect({
     required String baseUrl,
     OnMessageReceived? onMessage,
@@ -83,8 +89,10 @@ class SocketManager {
     });
   }
 
+  /// Getter for the socket instance
   io.Socket get socket => _socket;
 
+  /// Disconnects from the socket and clears all listeners
   void disconnect() {
     _socket.clearListeners();
     _socket.disconnect();

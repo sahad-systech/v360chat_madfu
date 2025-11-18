@@ -4,7 +4,9 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:madfu_demo/package/api_service.dart';
 
+/// Utility functions for the chat package
 
+/// Used to correctly identify file types when uploading
 String getMimeType(String path) {
   final extension = path.split('.').last.toLowerCase();
 
@@ -29,6 +31,7 @@ String getMimeType(String path) {
   }
 }
 
+/// Generates a unique ID combining timestamp and random number
 String generateUniqueId() {
   final random = Random();
   final timestamp = DateTime.now().millisecondsSinceEpoch;
@@ -36,6 +39,7 @@ String generateUniqueId() {
   return '$timestamp$randomInt';
 }
 
+/// Retrieves the FCM token from Firebase and updates it on the backend
 Future<void> getFCMToken(
     {required String userId,
     required String baseUrl,

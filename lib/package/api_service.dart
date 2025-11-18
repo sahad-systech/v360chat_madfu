@@ -15,18 +15,23 @@ import 'package:madfu_demo/package/models/chat_send_response.dart';
 import 'package:madfu_demo/package/models/view360chatprefs.dart';
 import 'package:madfu_demo/package/socket_manager.dart';
 
-
-
+/// It manages chat session creation, message sending, message fetching, and FCM token updates.
 class ChatService {
+  /// The base URL of the backend API
   final String baseUrl;
+  /// The unique application ID for authentication
   final String appId;
 
   ChatService({required this.baseUrl, required this.appId});
 
+  /// Emits a socket event to join the customer room
+  /// This notifies the backend that the customer has joined their specific room
   socketEmitIsWorking(String customerId) {
     SocketManager().socket.emit("joinRoom", "customer-$customerId");
   }
 
+  /// Creates a new chat session with customer information
+  /// Sends initial customer details and message to establish a chat session
   Future<ChatRegisterResponse> createChatSession({
     required String chatContent,
     required String customerName,
@@ -111,6 +116,7 @@ class ChatService {
     }
   }
 
+  /// Returns ChatSentResponse indicating success or failure
   Future<ChatSentResponse> sendChatMessage({
     List<String>? filePath,
     required String chatContent,
@@ -199,6 +205,9 @@ class ChatService {
     }
   }
 
+  /// Fetches all messages for the current chat session
+  /// Handles different message fetch scenarios: bot responses, queue status, and regular messages
+  /// Returns ChatListResponse containing the message list
   Future<ChatListResponse> fetchMessages() async {
     final View360ChatPrefsModel localstorage =
         await View360ChatPrefs.getString();
@@ -250,6 +259,8 @@ class ChatService {
     }
   }
 
+  /// Updates the FCM (Firebase Cloud Messaging) token on the backend
+  /// Used to enable push notifications for the customer
   Future<void> notificationToken(
       {required String token, required String userId}) async {
     try {
