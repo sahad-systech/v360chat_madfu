@@ -3,25 +3,24 @@ class ChatSentResponse {
   bool status;
   String? error;
   bool? isOutOfOfficeTime;
-  final Map<String,dynamic>? botResponse;
-
+  final Map<String, dynamic>? botResponse;
 
   ChatSentResponse(
       {this.message,
       required this.status,
       this.error,
-       this.botResponse,
+      this.botResponse,
       required this.isOutOfOfficeTime});
 
   factory ChatSentResponse.fromJson(Map<String, dynamic> json) {
     final isOutOfOfficeTime = json["out_off_hour"];
-    if (json['content']?['message'] ==  "Bot Response" ) {
-          return ChatSentResponse(
-      message: json['message'],
-      status: json['status'],
-      isOutOfOfficeTime: false,
-      botResponse: json['content']?['payload'] ?? {},
-    );
+    if (json['content']?['message'] == "Bot Response") {
+      return ChatSentResponse(
+        message: json['message'],
+        status: json['status'],
+        isOutOfOfficeTime: false,
+        botResponse: json['content']?['payload'] ?? {},
+      );
     }
     if (isOutOfOfficeTime) {
       return ChatSentResponse(

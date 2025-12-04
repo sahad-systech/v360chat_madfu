@@ -5,6 +5,7 @@ class ChatBottomSheet extends StatelessWidget {
   final VoidCallback onCameraTap;
   final VoidCallback onDocumentTap;
   final VoidCallback onAudioTap;
+  final VoidCallback onVideoTap;
 
   const ChatBottomSheet({
     super.key,
@@ -12,6 +13,7 @@ class ChatBottomSheet extends StatelessWidget {
     required this.onCameraTap,
     required this.onDocumentTap,
     required this.onAudioTap,
+    required this.onVideoTap,
   });
 
   @override
@@ -45,6 +47,11 @@ class ChatBottomSheet extends StatelessWidget {
                 icon: Icons.camera_alt,
                 label: 'Camera',
                 onTap: onCameraTap,
+              ),
+              _CircleButton(
+                icon: Icons.description,
+                label: 'Video',
+                onTap: onVideoTap,
               ),
               _CircleButton(
                 icon: Icons.description,

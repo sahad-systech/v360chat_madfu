@@ -17,6 +17,7 @@ import 'package:madfu_demo/package/socket_manager.dart';
 class ChatService {
   /// The base URL of the backend API
   final String baseUrl;
+
   /// The unique application ID for authentication
   final String appId;
 
@@ -70,13 +71,14 @@ class ChatService {
         final contentStatus = json['content']?['status'];
         final bool isQuieue = json['is_queue'] ?? false;
         final bool isBot = json['content']?['message'] == 'Bot Response';
-        final String? botId = json['content']?['payload']?['botChatId']?.toString();
+        final String? botId =
+            json['content']?['payload']?['botChatId']?.toString();
         final contentId = json['chatId']?.toString();
-        
+
         final customerId = json['customerId']?.toString();
         socketEmitIsWorking(customerId ?? '');
         await View360ChatPrefs.saveString(
-           botIdValue:botId ?? '0000',
+            botIdValue: botId ?? '0000',
             isBotValue: isBot,
             isInQueueValue: isQuieue,
             customerCondentIdValue: contentId ?? '',
@@ -96,8 +98,6 @@ class ChatService {
             onError: (error) {
               // Handle FCM token error
             });
-
-         
 
         return ChatRegisterResponse.fromJson(json);
       } else {
@@ -178,12 +178,13 @@ class ChatService {
 
       final response = await request.send();
       final responseString = await response.stream.bytesToString();
-    
+
       if (response.statusCode == 200 || response.statusCode == 304) {
         final json = jsonDecode(responseString);
-         final bool isQuieue = json['is_queue'] ?? false;
-         final customerId = json['customerId']?.toString();
-        await View360ChatPrefs.saveIsBotValue(json['content']['message'] == 'Bot Response');
+        final bool isQuieue = json['is_queue'] ?? false;
+        final customerId = json['customerId']?.toString();
+        await View360ChatPrefs.saveIsBotValue(
+            json['content']['message'] == 'Bot Response');
         await View360ChatPrefs.changeQueueStatus(isQuieue);
         await View360ChatPrefs.condentIdInQueue(json['chatId'].toString());
         await View360ChatPrefs.saveCustomerId(customerId ?? '000');
@@ -213,23 +214,23 @@ class ChatService {
     final View360ChatPrefsModel localstorage =
         await View360ChatPrefs.getString();
     final String contentId = localstorage.customerContentId;
-    final bool? isBot = await View360ChatPrefs.getIsSBot(); 
-    final String? botId = await View360ChatPrefs.getBotId(); 
+    final bool? isBot = await View360ChatPrefs.getIsSBot();
+    final String? botId = await View360ChatPrefs.getBotId();
     final bool isInQueue = localstorage.isInQueue;
     Uri url;
     if (isBot ?? false) {
       url = Uri.parse('$baseUrl/widgetapi/messages/bot-chat/messages/$botId');
     } else {
-         if (isInQueue) {
-      final String customerId = localstorage.customerId;
-      final String chatId = localstorage.chatId;
-      url = Uri.parse(
-          '$baseUrl/widgetapi/messages/chatQueueMessages?customerId=$customerId&channelChatId=$chatId');
-    } else {
-      url = Uri.parse('$baseUrl/widgetapi/messages/allMessages/$contentId');
+      if (isInQueue) {
+        final String customerId = localstorage.customerId;
+        final String chatId = localstorage.chatId;
+        url = Uri.parse(
+            '$baseUrl/widgetapi/messages/chatQueueMessages?customerId=$customerId&channelChatId=$chatId');
+      } else {
+        url = Uri.parse('$baseUrl/widgetapi/messages/allMessages/$contentId');
+      }
     }
-    }
- 
+
     final headers = {'app-id': appId};
 
     try {
@@ -239,7 +240,7 @@ class ChatService {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        return ChatListResponse.fromJson(data,isBot?? false);
+        return ChatListResponse.fromJson(data, isBot ?? false);
       } else {
         return ChatListResponse.error(
             'HTTP error - status code ${response.statusCode}');

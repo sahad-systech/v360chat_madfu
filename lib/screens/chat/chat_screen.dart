@@ -1,4 +1,3 @@
-
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -91,6 +90,17 @@ class ChatScreenState extends State<ChatScreen> {
     }
   }
 
+  Future<void> _handleVideoTap() async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.video,
+      allowMultiple: true,
+    );
+    if (!mounted) return;
+    if (result != null && result.files.isNotEmpty) {
+      _setSelectedFiles(result.files);
+    }
+  }
+
   Future<void> _handleAudioTap() async {
     final result = await FilePicker.platform.pickFiles(
       type: FileType.any,
@@ -128,7 +138,7 @@ class ChatScreenState extends State<ChatScreen> {
             filePaths,
             required response,
             required senderType,
-            }) {
+          }) {
             // Determine message content based on response type
             final messageType = response["type"];
             final updateContent = switch (messageType) {
@@ -215,6 +225,10 @@ class ChatScreenState extends State<ChatScreen> {
           Navigator.pop(context);
           await _handleAudioTap();
         },
+        onVideoTap: () async {
+          Navigator.pop(context);
+          await _handleVideoTap();
+        },
       ),
     );
   }
@@ -296,39 +310,40 @@ class ChatScreenState extends State<ChatScreen> {
                     itemCount: value.messages.length,
                     itemBuilder: (context, index) {
                       final msg = value.messages[index];
-      
+
                       // ✅ Skip rendering if message text is empty AND no files attached
                       final messageText = msg['text'];
                       final documentList = msg['filePath'] ?? msg['files'];
-                      final hasText = messageText != null && (messageText as String).trim().isNotEmpty;
-                      final hasFiles = documentList != null && (documentList as List).isNotEmpty;
-                      
+                      final hasText = messageText != null &&
+                          (messageText as String).trim().isNotEmpty;
+                      final hasFiles = documentList != null &&
+                          (documentList as List).isNotEmpty;
+
                       if (!hasText && !hasFiles) {
                         return const SizedBox.shrink();
                       }
-      
+
                       return ChatMiniContainer(
                         time: msg['time'],
                         onButtonTap: (btn) async {
                           if (_isSending) return;
-      
+
                           _messageController.text = btn.title;
                           final btnId = btn.id.trim();
                           if (btnId.isEmpty) return;
-      
+
                           setState(() => _isSending = true);
-      
-                          final contentToSend = _messageController.text.trim().isNotEmpty
-                              ? _messageController.text.trim()
-                              : btnId;
+
+                          final contentToSend =
+                              _messageController.text.trim().isNotEmpty
+                                  ? _messageController.text.trim()
+                                  : btnId;
 
                           final response = await chatService.sendChatMessage(
                             filePath: _selectedFilePaths(),
                             chatContent: contentToSend,
                           );
-      
 
-      
                           if (response.status) {
                             if (!mounted) return;
                             Provider.of<MessageList>(context, listen: false)
@@ -339,21 +354,21 @@ class ChatScreenState extends State<ChatScreen> {
                               files: _selectedFilePaths(),
                               senderType: 'customer',
                             );
-      
+
                             _messageController.clear();
                             selectedFiles.clear();
-      
+
                             WidgetsBinding.instance.addPostFrameCallback((_) {
                               _scrollToBottom();
                             });
                           }
-      
+
                           // ✅ Handle bot response from API
                           final messageList =
                               Provider.of<MessageList>(context, listen: false);
                           final Map<String, dynamic>? apiResponse =
                               response.botResponse;
-      
+
                           if (apiResponse != null) {
                             messageList.addBotMessage(
                               apiResponse,
@@ -361,7 +376,7 @@ class ChatScreenState extends State<ChatScreen> {
                               _formatNowTime(isLocal: true),
                             );
                           }
-      
+
                           if (!mounted) return;
                           setState(() => _isSending = false);
                         },
@@ -370,7 +385,8 @@ class ChatScreenState extends State<ChatScreen> {
                         isLocalFile: msg['isLocal'],
                         isSender: !msg['isMe'],
                         documentList: msg['filePath'] ?? msg['files'],
-                        message: (messageText is String ? messageText : '').trim(),
+                        message:
+                            (messageText is String ? messageText : '').trim(),
                       );
                     },
                   ),
@@ -439,7 +455,7 @@ class ChatScreenState extends State<ChatScreen> {
                               filePath: files,
                               chatContent: trimmed.isNotEmpty ? trimmed : '',
                             );
-      
+
                             if (response.status) {
                               if (!mounted) return;
                               setState(() {
@@ -453,7 +469,7 @@ class ChatScreenState extends State<ChatScreen> {
                                 _messageController.clear();
                                 selectedFiles.clear();
                               });
-      
+
                               WidgetsBinding.instance.addPostFrameCallback((_) {
                                 _scrollToBottom();
                               });
@@ -470,7 +486,7 @@ class ChatScreenState extends State<ChatScreen> {
                                   _formatNowTime(isLocal: true));
                             }
                             ///////////////////////////
-      
+
                             if (!mounted) return;
                             setState(() => _isSending = false);
                           },
